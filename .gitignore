@@ -27,5 +27,8 @@ coverage-report/
 *.so
 *.dylib
 
+# Analysis reports
+cppcheck-report.xml
+
 # SonarCloud
 .scannerwork/
