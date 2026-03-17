@@ -48,7 +48,7 @@ jobs:
       - name: Run tests with profiling
         run: |
           LLVM_PROFILE_FILE="build/coverage/default_%p.profraw" \
-            ctest --preset coverage
+            ./build/coverage/tests/rvc_tests
 
       - name: Generate coverage report
         run: |
@@ -141,7 +141,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # full history for blame
+          fetch-depth: 0 # full history for blame
 
       - name: Install dependencies
         run: |
@@ -159,7 +159,7 @@ jobs:
           cmake --build --preset coverage
           mkdir -p coverage-report
           LLVM_PROFILE_FILE="build/coverage/default_%p.profraw" \
-            ctest --preset coverage
+            ./build/coverage/tests/rvc_tests
           llvm-profdata merge -sparse build/coverage/default_*.profraw \
             -o build/coverage/default.profdata
           llvm-cov export \
