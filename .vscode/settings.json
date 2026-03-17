@@ -1,0 +1,17 @@
+{
+  "cmake.configurePreset": "dev",
+  "cmake.buildPreset": "dev",
+  "cmake.testPreset": "dev",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/build/dev",
+    "--header-insertion=iwyu",
+    "--clang-tidy"
+  ],
+  "editor.formatOnSave": true,
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+  },
+  "files.associations": {
+    "*.h": "cpp"
+  }
+}
