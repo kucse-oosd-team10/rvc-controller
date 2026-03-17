@@ -52,6 +52,8 @@ jobs:
 
       - name: Generate coverage report
         run: |
+          mkdir -p coverage-report
+          ls -la build/coverage/default_*.profraw
           llvm-profdata merge -sparse build/coverage/default_*.profraw \
             -o build/coverage/default.profdata
           llvm-cov export \
@@ -60,7 +62,6 @@ jobs:
             -format=lcov \
             -ignore-filename-regex='build/|tests/' \
             > coverage-report/lcov.info
-        shell: bash
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
