@@ -42,3 +42,9 @@ llvm-cov report \
 echo ""
 echo "HTML report: coverage-report/index.html"
 echo "LCOV export: coverage-report/lcov.info"
+
+echo "==> Converting to SonarCloud generic format..."
+python3 "$(dirname "$0")/lcov-to-sonar-generic.py" \
+    coverage-report/lcov.info \
+    coverage-report/sonar-coverage.xml
+echo "SonarCloud XML: coverage-report/sonar-coverage.xml"

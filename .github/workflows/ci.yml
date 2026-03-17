@@ -169,6 +169,9 @@ jobs:
             -format=lcov \
             -ignore-filename-regex='build/|tests/' \
             > coverage-report/lcov.info
+          python3 scripts/lcov-to-sonar-generic.py \
+            coverage-report/lcov.info \
+            coverage-report/sonar-coverage.xml
 
       - name: Generate cppcheck report
         run: |
