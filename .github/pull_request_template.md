@@ -1,3 +1,6 @@
+<!-- PR 제목 형식: <type>: <간단한 설명> (#<관련 이슈 번호>) (예: feat: 충돌 처리 로직 추가 (#123)) -->
+<!-- type: feat | fix | refactor | test | docs | build | ci | style | chore -->
+
 ## 변경 사항
 
 <!-- 이 PR에서 변경된 내용을 간략히 설명해주세요 -->
