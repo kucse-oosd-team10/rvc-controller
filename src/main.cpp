@@ -8,5 +8,6 @@ int main() {
     ctrl.tick();
 
     std::cout << "RVC Controller initialized.\n";
+    std::cout << "Stopped: " << (ctrl.isStopped() ? "yes" : "no") << "\n";
     return 0;
 }

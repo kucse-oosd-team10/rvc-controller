@@ -56,3 +56,20 @@ TEST_F(ControllerTest, NormalCleanWhenNoDust) {
     ctrl.tick();
     EXPECT_EQ(ctrl.getCleanMode(), CleanMode::On);
 }
+
+TEST_F(ControllerTest, StopsWhenAllBlocked) {
+    ctrl.setFrontSensor(true);
+    ctrl.setLeftSensor(true);
+    ctrl.setRightSensor(true);
+    ctrl.tick();
+    EXPECT_TRUE(ctrl.isStopped());
+}
+
+TEST_F(ControllerTest, SensorsResetAfterTick) {
+    ctrl.setFrontSensor(true);
+    ctrl.tick();
+    // Sensors reset, so second tick with no input should go forward
+    ctrl.tick();
+    EXPECT_EQ(ctrl.getDirection(), Direction::Forward);
+    EXPECT_FALSE(ctrl.isStopped());
+}
