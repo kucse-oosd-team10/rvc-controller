@@ -28,7 +28,11 @@ public:
     void setRightSensor(bool detected);
     void setDustSensor(bool detected);
 
+    bool isStopped() const;
+
 private:
+    void resetSensors();
+
     bool frontSensor_{false};
     bool leftSensor_{false};
     bool rightSensor_{false};
@@ -36,6 +40,7 @@ private:
 
     Direction direction_{Direction::Forward};
     CleanMode cleanMode_{CleanMode::On};
+    bool stopped_{false};
 };
 
 } // namespace rvc
