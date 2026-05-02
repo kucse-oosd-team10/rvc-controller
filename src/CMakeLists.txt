@@ -1,5 +1,6 @@
 # Library target (used by tests and main)
 add_library(rvc_lib
+    rvc_controller.cpp
     timer.cpp
 )
 
