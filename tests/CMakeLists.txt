@@ -8,7 +8,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 add_executable(rvc_tests
-    test_controller.cpp
+    test_timer.cpp
 )
 
 target_link_libraries(rvc_tests
