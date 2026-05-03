@@ -2,6 +2,7 @@
 add_library(rvc_lib
     rvc_controller.cpp
     timer.cpp
+    DefaultAvoidStrategy.cpp
 )
 
 target_include_directories(rvc_lib
