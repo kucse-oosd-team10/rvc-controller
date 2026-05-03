@@ -11,6 +11,7 @@ add_executable(rvc_tests
     test_device_interfaces.cpp
     test_pattern_interfaces.cpp
     test_timer.cpp
+    test_dust_sensor_subject.cpp
 )
 
 target_link_libraries(rvc_tests
