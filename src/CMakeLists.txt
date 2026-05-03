@@ -2,6 +2,7 @@
 add_library(rvc_lib
     rvc_controller.cpp
     timer.cpp
+    dust_sensor_subject.cpp
 )
 
 target_include_directories(rvc_lib
