@@ -81,7 +81,9 @@ TEST_F(TimerTest, ResetRestartsCountdown) {
 TEST_F(TimerTest, UpdateInvokesCallbackOnExpire) {
     int count = 0;
     timer.setDuration(100);
-    timer.setCallback([&] { ++count; });
+    timer.setCallback([&] {
+        ++count;
+    });
     timer.start();
 
     clock.increase(50);
@@ -96,7 +98,9 @@ TEST_F(TimerTest, UpdateInvokesCallbackOnExpire) {
 TEST_F(TimerTest, UpdateFiresCallbackOnlyOnce) {
     int count = 0;
     timer.setDuration(100);
-    timer.setCallback([&] { ++count; });
+    timer.setCallback([&] {
+        ++count;
+    });
     timer.start();
     clock.increase(150);
 
@@ -109,7 +113,9 @@ TEST_F(TimerTest, UpdateFiresCallbackOnlyOnce) {
 TEST_F(TimerTest, ResetReArmsCallback) {
     int count = 0;
     timer.setDuration(100);
-    timer.setCallback([&] { ++count; });
+    timer.setCallback([&] {
+        ++count;
+    });
     timer.start();
     clock.increase(150);
     timer.update();

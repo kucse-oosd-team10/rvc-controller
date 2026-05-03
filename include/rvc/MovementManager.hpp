@@ -9,7 +9,7 @@ class IObstacleSensor;
 
 class MovementManager {
 public:
-    MovementManager(IMotor* m, IAvoidStrategy* s, IObstacleSensor* o);
+    MovementManager(IMotor* motor_, IAvoidStrategy* strategy_, IObstacleSensor* obstacleSensor_);
 
     void moveForward();
     void moveBackward();
@@ -18,8 +18,8 @@ public:
     void executeAvoidance(bool front, bool left, bool right);
 
 private:
-    IMotor* motor;
-    IAvoidStrategy* strategy;
-    IObstacleSensor* obstacleSensor;
+    IMotor* motor_;
+    IAvoidStrategy* strategy_;
+    IObstacleSensor* obstacleSensor_;
 };
 } // namespace rvc

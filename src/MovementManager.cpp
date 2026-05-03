@@ -6,34 +6,35 @@
 
 namespace rvc {
 
-MovementManager::MovementManager(IMotor* m, IAvoidStrategy* s, IObstacleSensor* o)
-    : motor(m), strategy(s), obstacleSensor(o) {
+MovementManager::MovementManager(IMotor* motor_, IAvoidStrategy* strategy_,
+                                 IObstacleSensor* obstacleSensor_)
+    : motor_(motor_), strategy_(strategy_), obstacleSensor_(obstacleSensor_) {
 }
 
 void MovementManager::moveForward() {
-    motor->move(Direction::FORWARD);
+    motor_->move(Direction::FORWARD);
 }
 
 void MovementManager::moveBackward() {
-    motor->move(Direction::BACKWARD);
+    motor_->move(Direction::BACKWARD);
 }
 
 void MovementManager::turn(Direction direction) {
-    motor->move(direction);
+    motor_->move(direction);
 }
 
 void MovementManager::stop() {
-    motor->move(Direction::STOP);
+    motor_->move(Direction::STOP);
 }
 
 void MovementManager::executeAvoidance(bool front, bool left, bool right) {
     bool leftStatus = left;
     bool rightStatus = right;
-    if (strategy->needsReverse(front, left, right)) {
+    if (strategy_->needsReverse(front, left, right)) {
         moveBackward();
         while (leftStatus && rightStatus) {
-            leftStatus = obstacleSensor->isLeftDetected();
-            rightStatus = obstacleSensor->isRightDetected();
+            leftStatus = obstacleSensor_->isLeftDetected();
+            rightStatus = obstacleSensor_->isRightDetected();
         }
         if (leftStatus && !rightStatus) {
             turn(Direction::RIGHT);
@@ -41,7 +42,7 @@ void MovementManager::executeAvoidance(bool front, bool left, bool right) {
             turn(Direction::LEFT);
         }
     } else {
-        Direction nextDir = strategy->decideDirection(front, left, right);
+        Direction nextDir = strategy_->decideDirection(front, left, right);
         turn(nextDir);
     }
 }

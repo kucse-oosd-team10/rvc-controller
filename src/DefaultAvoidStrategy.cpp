@@ -2,12 +2,17 @@
 
 namespace rvc {
 Direction DefaultAvoidStrategy::decideDirection(bool front, bool left, bool right) {
-    if (front && left && right)
+    if (front && left && right) {
         return Direction::BACKWARD;
-    if (front && left)
+    }
+
+    if (front && left) {
         return Direction::RIGHT;
-    if (front)
+    }
+
+    if (front) {
         return Direction::LEFT;
+    }
     return Direction::FORWARD;
 }
 

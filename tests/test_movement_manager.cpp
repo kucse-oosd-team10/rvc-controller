@@ -15,8 +15,8 @@ public:
         return true;
     }
 
-    void move(Direction d) override {
-        lastDirection = d;
+    void move(Direction direction) override {
+        lastDirection = direction;
     }
 };
 
@@ -25,7 +25,7 @@ public:
     bool shouldReverse = false;
     Direction nextDir = Direction::FORWARD;
 
-    Direction decideDirection(bool f, bool l, bool r) override {
+    Direction decideDirection(bool front, bool left, bool right) override {
         return nextDir;
     }
 
@@ -62,6 +62,7 @@ protected:
     MockSensor* sensor;
     MovementManager* manager;
 
+    // cppcheck-suppress unusedFunction
     void SetUp() override {
         motor = new MockMotor();
         strategy = new MockStrategy();
@@ -69,6 +70,7 @@ protected:
         manager = new MovementManager(motor, strategy, sensor);
     }
 
+    // cppcheck-suppress unusedFunction
     void TearDown() override {
         delete manager;
         delete sensor;
