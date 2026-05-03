@@ -37,7 +37,7 @@ void Timer::reset() {
 }
 
 bool Timer::isExpired() const {
-    return !isRunning_ ? false : (clock_() - startTime_) >= duration_;
+    return isRunning_ && ((clock_() - startTime_) >= duration_);
 }
 
 bool Timer::isRunning() const {
