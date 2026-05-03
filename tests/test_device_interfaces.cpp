@@ -216,7 +216,8 @@ TEST(DeviceInterfacesTest, ObstacleSensorThroughInterfacePointer) {
     EXPECT_FALSE(iface->isFrontDetected());
 }
 
-// std::unique_ptr<IObstacleSensor>를 통한 소멸로 IObstacleSensor의 가상 소멸자 경로가 실행되는지 확인한다.
+// std::unique_ptr<IObstacleSensor>를 통한 소멸로 IObstacleSensor의 가상 소멸자 경로가 실행되는지
+// 확인한다.
 TEST(DeviceInterfacesTest, ObstacleSensorVirtualDestructorViaUniquePtr) {
     std::unique_ptr<rvc::IObstacleSensor> sensor = std::make_unique<TestObstacleSensor>();
     EXPECT_TRUE(sensor->initialize());
