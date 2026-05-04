@@ -10,16 +10,24 @@ class IObstacleSensor;
 class MovementManager {
 public:
     MovementManager(IMotor* motor_, IAvoidStrategy* strategy_, IObstacleSensor* obstacleSensor_);
+    ~MovementManager() = default;
+
+    MovementManager(const MovementManager&) = delete;
+    MovementManager& operator=(const MovementManager&) = delete;
+    MovementManager(MovementManager&&) = delete;
+    MovementManager& operator=(MovementManager&&) = delete;
 
     void moveForward();
     void moveBackward();
     void turn(Direction direction);
     void stop();
     void executeAvoidance(bool front, bool left, bool right);
+    Direction getDirection() const;
 
 private:
-    IMotor* motor_;
-    IAvoidStrategy* strategy_;
-    IObstacleSensor* obstacleSensor_;
+    IMotor* motor_{nullptr};
+    IAvoidStrategy* strategy_{nullptr};
+    IObstacleSensor* obstacleSensor_{nullptr};
+    Direction LastDirection_{Direction::STOP};
 };
 } // namespace rvc

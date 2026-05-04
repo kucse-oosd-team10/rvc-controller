@@ -12,38 +12,66 @@ MovementManager::MovementManager(IMotor* motor_, IAvoidStrategy* strategy_,
 }
 
 void MovementManager::moveForward() {
-    motor_->move(Direction::FORWARD);
+    if (motor_ == nullptr) {
+        return;
+    }
+    if (LastDirection_ != Direction::FORWARD) {
+        motor_->move(Direction::FORWARD);
+        LastDirection_ = Direction::FORWARD;
+    }
 }
 
 void MovementManager::moveBackward() {
-    motor_->move(Direction::BACKWARD);
+    if (motor_ == nullptr) {
+        return;
+    }
+    if (LastDirection_ != Direction::BACKWARD) {
+        motor_->move(Direction::BACKWARD);
+        LastDirection_ = Direction::BACKWARD;
+    }
 }
 
 void MovementManager::turn(Direction direction) {
-    motor_->move(direction);
+    if (motor_ == nullptr) {
+        return;
+    }
+    if (LastDirection_ != direction) {
+        motor_->move(direction);
+        LastDirection_ = direction;
+    }
 }
 
 void MovementManager::stop() {
-    motor_->move(Direction::STOP);
+    if (motor_ == nullptr) {
+        return;
+    }
+    if (LastDirection_ != Direction::STOP) {
+        motor_->move(Direction::STOP);
+        LastDirection_ = Direction::STOP;
+    }
 }
 
 void MovementManager::executeAvoidance(bool front, bool left, bool right) {
     bool leftStatus = left;
     bool rightStatus = right;
     if (strategy_->needsReverse(front, left, right)) {
-        moveBackward();
+        if (LastDirection_ != Direction::BACKWARD) {
+            moveBackward();
+        }
         while (leftStatus && rightStatus) {
             leftStatus = obstacleSensor_->isLeftDetected();
             rightStatus = obstacleSensor_->isRightDetected();
         }
-        if (leftStatus && !rightStatus) {
-            turn(Direction::RIGHT);
-        } else {
-            turn(Direction::LEFT);
-        }
+        bool currentFront = obstacleSensor_->isFrontDetected();
+        bool currentLeft = obstacleSensor_->isLeftDetected();
+        bool currentRight = obstacleSensor_->isRightDetected();
+        Direction nextDir = strategy_->decideDirection(currentFront, currentLeft, currentRight);
+        turn(nextDir);
     } else {
         Direction nextDir = strategy_->decideDirection(front, left, right);
-        turn(nextDir);
+        if (LastDirection_ != nextDir) {
+            turn(nextDir);
+        }
     }
 }
 } // namespace rvc

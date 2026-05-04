@@ -18,6 +18,7 @@ add_executable(rvc_tests
 target_link_libraries(rvc_tests
     PRIVATE rvc_lib
     PRIVATE GTest::gtest_main
+    PRIVATE GTest::gmock_main
 )
 
 include(GoogleTest)

@@ -3,128 +3,145 @@
 #include "rvc/i_motor.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
 
+#include <gmock/gmock.h>
+
 #include <gtest/gtest.h>
 
 using namespace rvc;
 
 class MockMotor : public IMotor {
 public:
-    Direction lastDirection = Direction::STOP;
-
-    bool initialize() override {
-        return true;
-    }
-
-    void move(Direction direction) override {
-        lastDirection = direction;
-    }
+    MOCK_METHOD(bool, initialize, (), (override));
+    MOCK_METHOD(void, move, (Direction direction), (override));
 };
 
 class MockStrategy : public IAvoidStrategy {
 public:
-    bool shouldReverse = false;
-    Direction nextDir = Direction::FORWARD;
-
-    Direction decideDirection(bool front, bool left, bool right) override {
-        return nextDir;
-    }
-
-    bool needsReverse(bool f, bool l, bool r) override {
-        return shouldReverse;
-    }
+    MOCK_METHOD(Direction, decideDirection, (bool front, bool left, bool right), (override));
+    MOCK_METHOD(bool, needsReverse, (bool front, bool left, bool right), (override));
 };
 
 class MockSensor : public IObstacleSensor {
 public:
-    bool front = false, left = false, right = false;
-
-    bool initialize() override {
-        return true;
-    }
-
-    bool isFrontDetected() override {
-        return front;
-    }
-
-    bool isLeftDetected() override {
-        return left;
-    }
-
-    bool isRightDetected() override {
-        return right;
-    }
+    // MOCK_METHOD(반환타입, 함수이름, (인자), (한정자));
+    MOCK_METHOD(bool, initialize, (), (override));
+    MOCK_METHOD(bool, isFrontDetected, (), (override));
+    MOCK_METHOD(bool, isLeftDetected, (), (override));
+    MOCK_METHOD(bool, isRightDetected, (), (override));
 };
 
 class MovementManagerTest : public ::testing::Test {
 protected:
-    MockMotor* motor;
-    MockStrategy* strategy;
-    MockSensor* sensor;
-    MovementManager* manager;
-
-    // cppcheck-suppress unusedFunction
-    void SetUp() override {
-        motor = new MockMotor();
-        strategy = new MockStrategy();
-        sensor = new MockSensor();
-        manager = new MovementManager(motor, strategy, sensor);
-    }
-
-    // cppcheck-suppress unusedFunction
-    void TearDown() override {
-        delete manager;
-        delete sensor;
-        delete strategy;
-        delete motor;
-    }
+    MockMotor motor;
+    MockStrategy strategy;
+    MockSensor sensor;
+    MovementManager manager{&motor, &strategy, &sensor};
 };
 
 TEST_F(MovementManagerTest, MoveForward) {
-    manager->moveForward();
-    EXPECT_EQ(motor->lastDirection, Direction::FORWARD);
+    EXPECT_CALL(motor, move(Direction::FORWARD)).Times(1);
+    manager.moveForward();
 }
 
 TEST_F(MovementManagerTest, MoveBackward) {
-    manager->moveBackward();
-    EXPECT_EQ(motor->lastDirection, Direction::BACKWARD);
+    EXPECT_CALL(motor, move(Direction::BACKWARD)).Times(1);
+    manager.moveBackward();
 }
 
 TEST_F(MovementManagerTest, TurnLeft) {
-    manager->turn(Direction::LEFT);
-    EXPECT_EQ(motor->lastDirection, Direction::LEFT);
+    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
+    manager.turn(Direction::LEFT);
 }
 
 TEST_F(MovementManagerTest, TurnRight) {
-    manager->turn(Direction::RIGHT);
-    EXPECT_EQ(motor->lastDirection, Direction::RIGHT);
+    EXPECT_CALL(motor, move(Direction::RIGHT)).Times(1);
+    manager.turn(Direction::RIGHT);
 }
 
 TEST_F(MovementManagerTest, Stop) {
-    manager->stop();
-    EXPECT_EQ(motor->lastDirection, Direction::STOP);
+    manager.moveForward();
+    EXPECT_CALL(motor, move(Direction::STOP)).Times(1);
+    manager.stop();
 }
 
 TEST_F(MovementManagerTest, AvoidanceWithoutReverseTurnLeft) {
-    strategy->shouldReverse = false;
-    strategy->nextDir = Direction::LEFT;
-    manager->executeAvoidance(true, false, false);
-    EXPECT_EQ(motor->lastDirection, Direction::LEFT);
+    EXPECT_CALL(strategy, needsReverse(true, false, false)).WillOnce(testing::Return(false));
+    EXPECT_CALL(strategy, decideDirection(true, false, false))
+        .WillOnce(testing::Return(Direction::LEFT));
+    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
+    manager.executeAvoidance(true, false, false);
 }
 
 TEST_F(MovementManagerTest, AvoidanceWithoutReverseTurnRight) {
-    strategy->shouldReverse = false;
-    strategy->nextDir = Direction::RIGHT;
-    manager->executeAvoidance(true, true, false);
-    EXPECT_EQ(motor->lastDirection, Direction::RIGHT);
+    EXPECT_CALL(strategy, needsReverse(true, true, false)).WillOnce(testing::Return(false));
+    EXPECT_CALL(strategy, decideDirection(true, true, false))
+        .WillOnce(testing::Return(Direction::RIGHT));
+    EXPECT_CALL(motor, move(Direction::RIGHT)).Times(1);
+    manager.executeAvoidance(true, true, false);
 }
 
-// TEST_F(MovementManagerTest, EscapeLooptest) {
-//     strategy->shouldReverse = true;
-//     sensor->front = true;
-//     sensor->left = true;
-//     sensor->right = true;
-//     manager->executeAvoidance(true, true, true);
-//     EXPECT_EQ(motor->lastDirection, Direction::BACKWARD);
-//     sensor->left = false;
-//     EXPECT_EQ(motor->lastDirection, Direction::LEFT)
-// }
+TEST_F(MovementManagerTest, EscapeLoopWithLeftTurn) {
+    using ::testing::InSequence;
+    using ::testing::Return;
+
+    InSequence s;
+    EXPECT_CALL(strategy, needsReverse(true, true, true)).WillOnce(Return(true));
+    EXPECT_CALL(motor, move(Direction::BACKWARD)).Times(1);
+
+    EXPECT_CALL(sensor, isLeftDetected()).WillOnce(Return(false));
+    EXPECT_CALL(sensor, isRightDetected()).WillOnce(Return(true));
+
+    EXPECT_CALL(sensor, isFrontDetected()).WillOnce(Return(true));
+    EXPECT_CALL(sensor, isLeftDetected()).WillOnce(Return(false));
+    EXPECT_CALL(sensor, isRightDetected()).WillOnce(Return(true));
+
+    EXPECT_CALL(strategy, decideDirection(true, false, true)).WillOnce(Return(Direction::LEFT));
+
+    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
+
+    manager.executeAvoidance(true, true, true);
+}
+
+TEST_F(MovementManagerTest, EscapeLoopWithRightTurn) {
+    using ::testing::InSequence;
+    using ::testing::Return;
+
+    InSequence s;
+    EXPECT_CALL(strategy, needsReverse(true, true, true)).WillOnce(Return(true));
+    EXPECT_CALL(motor, move(Direction::BACKWARD)).Times(1);
+
+    EXPECT_CALL(sensor, isLeftDetected()).WillOnce(Return(true));
+    EXPECT_CALL(sensor, isRightDetected()).WillOnce(Return(false));
+
+    EXPECT_CALL(sensor, isFrontDetected()).WillOnce(Return(true));
+    EXPECT_CALL(sensor, isLeftDetected()).WillOnce(Return(true));
+    EXPECT_CALL(sensor, isRightDetected()).WillOnce(Return(false));
+
+    EXPECT_CALL(strategy, decideDirection(true, true, false)).WillOnce(Return(Direction::RIGHT));
+
+    EXPECT_CALL(motor, move(Direction::RIGHT)).Times(1);
+
+    manager.executeAvoidance(true, true, true);
+}
+
+TEST_F(MovementManagerTest, EscapeLoopWithLeftTurn2) {
+    using ::testing::InSequence;
+    using ::testing::Return;
+
+    InSequence s;
+    EXPECT_CALL(strategy, needsReverse(true, true, true)).WillOnce(Return(true));
+    EXPECT_CALL(motor, move(Direction::BACKWARD)).Times(1);
+
+    EXPECT_CALL(sensor, isLeftDetected()).WillOnce(Return(false));
+    EXPECT_CALL(sensor, isRightDetected()).WillOnce(Return(false));
+
+    EXPECT_CALL(sensor, isFrontDetected()).WillOnce(Return(false));
+    EXPECT_CALL(sensor, isLeftDetected()).WillOnce(Return(false));
+    EXPECT_CALL(sensor, isRightDetected()).WillOnce(Return(false));
+
+    EXPECT_CALL(strategy, decideDirection(false, false, false)).WillOnce(Return(Direction::LEFT));
+
+    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
+
+    manager.executeAvoidance(true, true, true);
+}
