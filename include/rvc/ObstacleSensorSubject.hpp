@@ -14,8 +14,9 @@ namespace rvc {
 class ObstacleSensorSubject : public ISensorSubject {
 public:
     ObstacleSensorSubject() = default;
-    explicit ObstacleSensorSubject(std::unique_ptr<IObstacleSensor> sensor,
-                                   bool useInterrupt = false);
+    explicit ObstacleSensorSubject(std::unique_ptr<IObstacleSensor> frontSensor,
+                                   std::unique_ptr<IObstacleSensor> leftSensor,
+                                   std::unique_ptr<IObstacleSensor> rightSensor);
     ObstacleSensorSubject(const ObstacleSensorSubject&) = delete;
     ObstacleSensorSubject& operator=(const ObstacleSensorSubject&) = delete;
     ObstacleSensorSubject(ObstacleSensorSubject&&) = delete;
@@ -29,10 +30,14 @@ public:
     void onInterrupt();
 
 private:
-    std::unique_ptr<IObstacleSensor> sensor_ = nullptr;
+    std::unique_ptr<IObstacleSensor> frontSensor_ = nullptr;
+    std::unique_ptr<IObstacleSensor> leftSensor_ = nullptr;
+    std::unique_ptr<IObstacleSensor> rightSensor_ = nullptr;
+    bool frontDetected_{false};
+    bool leftDetected_{false};
+    bool rightDetected_{false};
     std::list<ISensorObserver*> observers_;
     Timer pollingTimer_;
-    bool useInterrupt_ = false;
 };
 
 } // namespace rvc
