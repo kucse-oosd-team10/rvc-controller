@@ -9,7 +9,7 @@ class IObstacleSensor;
 
 class MovementManager {
 public:
-    MovementManager(IMotor* motor_, IAvoidStrategy* strategy_, IObstacleSensor* obstacleSensor_);
+    MovementManager(IMotor* motor, IAvoidStrategy* strategy, IObstacleSensor* obstacleSensor);
     ~MovementManager() = default;
 
     MovementManager(const MovementManager&) = delete;
