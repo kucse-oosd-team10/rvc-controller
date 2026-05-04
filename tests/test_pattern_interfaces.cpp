@@ -3,7 +3,6 @@
 #include "rvc/i_sensor_observer.hpp"
 #include "rvc/types.hpp"
 
-#include <algorithm>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -39,7 +38,7 @@ public:
     }
 
     void detach(rvc::ISensorObserver* obs) override {
-        observers_.erase(std::remove(observers_.begin(), observers_.end(), obs), observers_.end());
+        std::erase(observers_, obs);
     }
 
     void notify() override {
