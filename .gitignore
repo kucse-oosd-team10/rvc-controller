@@ -32,3 +32,5 @@ cppcheck-report.xml
 
 # SonarCloud
 .scannerwork/
+
+.clangd
