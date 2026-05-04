@@ -198,15 +198,14 @@ TEST(SensorSubjectTest, ReattachAfterDetachReceivesNotification) {
 
 // ISensorObserver 가상 소멸자가 파생 클래스에서 안전하게 호출되는지 확인
 TEST(SensorSubjectTest, ObserverVirtualDestructorViaUniquePtr) {
-    auto obs = std::make_unique<TestObserver>();
-    std::unique_ptr<rvc::ISensorObserver> base = std::move(obs);
-    // 소멸 시 UB 없이 정상 종료되어야 함
+    std::unique_ptr<rvc::ISensorObserver> base = std::make_unique<TestObserver>();
+    EXPECT_NE(base, nullptr);
 }
 
 // ISensorSubject 가상 소멸자가 파생 클래스에서 안전하게 호출되는지 확인
 TEST(SensorSubjectTest, SubjectVirtualDestructorViaUniquePtr) {
-    auto subject = std::make_unique<TestSubject>();
-    std::unique_ptr<rvc::ISensorSubject> base = std::move(subject);
+    std::unique_ptr<rvc::ISensorSubject> base = std::make_unique<TestSubject>();
+    EXPECT_NE(base, nullptr);
 }
 
 // TestState 초기 카운터가 모두 0인지 확인
@@ -272,8 +271,8 @@ TEST(IRVCStateTest, MultipleCallsAccumulateCounts) {
 
 // IRVCState 가상 소멸자가 파생 클래스에서 안전하게 호출되는지 확인
 TEST(IRVCStateTest, VirtualDestructorViaUniquePtr) {
-    auto state = std::make_unique<TestState>();
-    std::unique_ptr<rvc::IRVCState> base = std::move(state);
+    std::unique_ptr<rvc::IRVCState> base = std::make_unique<TestState>();
+    EXPECT_NE(base, nullptr);
 }
 
 // 장애물 조합별 회피 방향이 우선순위 전략에 맞게 결정되는지 확인
@@ -320,6 +319,6 @@ TEST(IAvoidStrategyTest, PolymorphicDispatch) {
 
 // IAvoidStrategy 가상 소멸자가 파생 클래스에서 안전하게 호출되는지 확인
 TEST(IAvoidStrategyTest, VirtualDestructorViaUniquePtr) {
-    auto strategy = std::make_unique<LeftPriorityStrategy>();
-    std::unique_ptr<rvc::IAvoidStrategy> base = std::move(strategy);
+    std::unique_ptr<rvc::IAvoidStrategy> base = std::make_unique<LeftPriorityStrategy>();
+    EXPECT_NE(base, nullptr);
 }
