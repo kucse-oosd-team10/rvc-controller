@@ -6,9 +6,9 @@
 
 namespace rvc {
 
-MovementManager::MovementManager(IMotor* motor_, IAvoidStrategy* strategy_,
-                                 IObstacleSensor* obstacleSensor_)
-    : motor_(motor_), strategy_(strategy_), obstacleSensor_(obstacleSensor_) {
+MovementManager::MovementManager(IMotor* motor, IAvoidStrategy* strategy,
+                                 IObstacleSensor* obstacleSensor)
+    : motor_(motor), strategy_(strategy), obstacleSensor_(obstacleSensor) {
 }
 
 void MovementManager::moveForward() {
