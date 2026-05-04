@@ -76,18 +76,27 @@ protected:
     };
 
     // Helper to get raw pointer for setting states before moving to subject
-    MockSensor* rawSensor;
-    std::unique_ptr<MockSensor> sensor;
+    MockSensor* rawFrontSensor;
+    MockSensor* rawLeftSensor;
+    MockSensor* rawRightSensor;
+    std::unique_ptr<MockSensor> frontSensor;
+    std::unique_ptr<MockSensor> leftSensor;
+    std::unique_ptr<MockSensor> rightSensor;
 
     // cppcheck-suppress unusedFunction
     void SetUp() override {
-        sensor = std::make_unique<MockSensor>();
-        rawSensor = sensor.get();
+        frontSensor = std::make_unique<MockSensor>();
+        leftSensor = std::make_unique<MockSensor>();
+        rightSensor = std::make_unique<MockSensor>();
+        rawFrontSensor = frontSensor.get();
+        rawLeftSensor = leftSensor.get();
+        rawRightSensor = rightSensor.get();
     }
 };
 
 TEST_F(ObstacleSensorTest, ObserverReceivesUpdates) {
-    ObstacleSensorSubject subject{std::move(sensor)};
+    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
+                                  std::move(rightSensor)};
     MockObserver observer;
     subject.attach(&observer);
 
@@ -101,7 +110,9 @@ TEST_F(ObstacleSensorTest, ObserverReceivesUpdates) {
     EXPECT_FALSE(observer.lastFront());
 
     // Set obstacle and notify
-    rawSensor->setObstacles(true, false, true);
+    rawFrontSensor->setObstacles(true, false, false);
+    rawLeftSensor->setObstacles(false, false, false);
+    rawRightSensor->setObstacles(false, false, true);
     subject.notify();
     EXPECT_EQ(observer.updateCount(), 2);
     EXPECT_TRUE(observer.lastFront());
@@ -110,7 +121,8 @@ TEST_F(ObstacleSensorTest, ObserverReceivesUpdates) {
 }
 
 TEST_F(ObstacleSensorTest, DetachObserver) {
-    ObstacleSensorSubject subject{std::move(sensor)};
+    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
+                                  std::move(rightSensor)};
     MockObserver observer;
     subject.attach(&observer);
     subject.detach(&observer);
@@ -121,7 +133,8 @@ TEST_F(ObstacleSensorTest, DetachObserver) {
 }
 
 TEST_F(ObstacleSensorTest, AttachMultipleObservers) {
-    ObstacleSensorSubject subject{std::move(sensor)};
+    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
+                                  std::move(rightSensor)};
     MockObserver observer1;
 
     class MockObserver2 : public rvc::ISensorObserver {
@@ -159,8 +172,35 @@ TEST_F(ObstacleSensorTest, AttachMultipleObservers) {
     EXPECT_EQ(observer2.updateCount(), 2); // Updated
 }
 
+TEST_F(ObstacleSensorTest, AttachIgnoresNullptrAndDuplicates) {
+    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
+                                  std::move(rightSensor)};
+    MockObserver observer;
+
+    subject.attach(nullptr);
+    subject.attach(&observer);
+    subject.attach(&observer);
+
+    subject.notify();
+
+    EXPECT_EQ(observer.updateCount(), 1);
+}
+
+TEST_F(ObstacleSensorTest, DetachIgnoresNullptr) {
+    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
+                                  std::move(rightSensor)};
+    MockObserver observer;
+
+    subject.attach(&observer);
+    subject.detach(nullptr);
+    subject.notify();
+
+    EXPECT_EQ(observer.updateCount(), 1);
+}
+
 TEST_F(ObstacleSensorTest, PollCanBeCalledSafely) {
-    ObstacleSensorSubject subject{std::move(sensor)};
+    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
+                                  std::move(rightSensor)};
     MockObserver observer;
     subject.attach(&observer);
 
