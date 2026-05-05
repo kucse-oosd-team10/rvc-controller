@@ -10,6 +10,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(rvc_tests
     test_device_interfaces.cpp
     test_pattern_interfaces.cpp
+    test_rvc_controller.cpp
     test_timer.cpp
 )
 
