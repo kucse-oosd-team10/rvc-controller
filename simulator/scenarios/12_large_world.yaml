@@ -1,0 +1,36 @@
+name: large_world
+description: |
+  30x30 world with one obstacle in the open. Sanity check on coordinate
+  scaling and longer runs.
+
+tick_duration_ms: 100
+max_ticks: 25
+power_off_at_tick: 20
+
+world:
+  size: [30, 30]
+  obstacles:
+    - [10, 15]
+  dust:
+    - {pos: [3, 15], amount: 1.0}
+    - {pos: [6, 15], amount: 1.0}
+    - {pos: [9, 15], amount: 1.0}
+
+robot:
+  start: [1, 15]
+  heading: E
+
+cleaning_rates: {off: 0.0, normal: 0.5, power_up: 2.0}
+
+init_failures: {motor: 0, cleaner: 0, obstacle_sensor: 0, dust_sensor: 0}
+
+assertions:
+  - kind: motor_history_contains
+    direction: FORWARD
+  - kind: motor_history_contains
+    direction: LEFT
+    description: hits obstacle at (10,15) → avoidance turns LEFT
+  - kind: dust_collected_at_least
+    value: 1.0
+  - kind: robot_in_region
+    region: [[0, 0], [29, 29]]

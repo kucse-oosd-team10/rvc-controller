@@ -1,0 +1,31 @@
+name: zero_dust
+description: |
+  Empty world with no dust. Cleaner runs at NORMAL throughout, no PowerUp.
+
+tick_duration_ms: 100
+max_ticks: 10
+power_off_at_tick: 6
+
+world:
+  size: [10, 5]
+  obstacles: []
+  dust: []
+
+robot:
+  start: [1, 2]
+  heading: E
+
+cleaning_rates: {off: 0.0, normal: 0.5, power_up: 2.0}
+
+init_failures: {motor: 0, cleaner: 0, obstacle_sensor: 0, dust_sensor: 0}
+
+assertions:
+  - kind: cleaner_history_contains
+    power: NORMAL
+  - kind: dust_remaining_eq
+    value: 0.0
+    tolerance: 0.0001
+  - kind: collision_count_eq
+    value: 0
+  - kind: robot_in_region
+    region: [[0, 0], [9, 4]]

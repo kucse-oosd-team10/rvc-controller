@@ -1,0 +1,32 @@
+name: small_world
+description: |
+  4x4 world — robot is one cell from every wall. Verifies that boundary
+  detection works and the controller does not crash in cramped spaces.
+
+tick_duration_ms: 100
+max_ticks: 12
+power_off_at_tick: 8
+
+world:
+  size: [4, 4]
+  obstacles: []
+  dust:
+    - {pos: [1, 1], amount: 1.0}
+    - {pos: [2, 2], amount: 1.0}
+
+robot:
+  start: [0, 1]
+  heading: E
+
+cleaning_rates: {off: 0.0, normal: 0.5, power_up: 2.0}
+
+init_failures: {motor: 0, cleaner: 0, obstacle_sensor: 0, dust_sensor: 0}
+
+assertions:
+  - kind: robot_in_region
+    region: [[0, 0], [3, 3]]
+    description: robot stays inside the 4x4 world
+  - kind: motor_history_contains
+    direction: FORWARD
+  - kind: dust_collected_at_least
+    value: 0.5

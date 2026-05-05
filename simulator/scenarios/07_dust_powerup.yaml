@@ -1,0 +1,34 @@
+name: dust_powerup
+description: |
+  Dust sensor reports True (amount ≥ threshold). Cleaning state forwards
+  the notification to CleaningManager which switches to POWER_UP.
+
+tick_duration_ms: 100
+max_ticks: 6
+power_off_at_tick: 4
+
+world:
+  size: [8, 5]
+  obstacles: []
+  dust_threshold: 0.5
+  dust:
+    - {pos: [2, 2], amount: 1.0}
+    - {pos: [3, 2], amount: 1.0}
+
+robot:
+  start: [1, 2]
+  heading: E
+
+cleaning_rates: {off: 0.0, normal: 0.5, power_up: 2.0}
+
+init_failures: {motor: 0, cleaner: 0, obstacle_sensor: 0, dust_sensor: 0}
+
+assertions:
+  - kind: cleaner_history_contains
+    power: POWER_UP
+    description: dust ≥ threshold triggers PowerUp
+  - kind: dust_collected_at_least
+    value: 1.5
+    description: PowerUp accelerates collection
+  - kind: collision_count_eq
+    value: 0

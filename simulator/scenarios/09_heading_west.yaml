@@ -1,0 +1,30 @@
+name: heading_west
+description: |
+  Robot starts facing W. Forward decreases x.
+
+tick_duration_ms: 100
+max_ticks: 8
+power_off_at_tick: 6
+
+world:
+  size: [10, 5]
+  obstacles: []
+  dust:
+    - {pos: [6, 2], amount: 1.0}
+
+robot:
+  start: [8, 2]
+  heading: W
+
+cleaning_rates: {off: 0.0, normal: 0.5, power_up: 2.0}
+
+init_failures: {motor: 0, cleaner: 0, obstacle_sensor: 0, dust_sensor: 0}
+
+assertions:
+  - kind: robot_pose_at_tick
+    tick: 0
+    x: 7
+    y: 2
+    heading: W
+  - kind: collision_count_eq
+    value: 0

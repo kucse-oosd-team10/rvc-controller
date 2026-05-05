@@ -1,0 +1,35 @@
+name: heading_north
+description: |
+  Robot starts facing N (up in pygame coords). Verifies heading-dependent
+  motion: forward should decrease y.
+
+tick_duration_ms: 100
+max_ticks: 8
+power_off_at_tick: 6
+
+world:
+  size: [7, 9]
+  obstacles: []
+  dust:
+    - {pos: [3, 5], amount: 1.0}
+    - {pos: [3, 3], amount: 1.0}
+
+robot:
+  start: [3, 7]
+  heading: "N"
+
+cleaning_rates: {off: 0.0, normal: 0.5, power_up: 2.0}
+
+init_failures: {motor: 0, cleaner: 0, obstacle_sensor: 0, dust_sensor: 0}
+
+assertions:
+  - kind: robot_pose_at_tick
+    tick: 0
+    x: 3
+    y: 6
+    heading: "N"
+    description: powerOn → Cleaning.onEnter advances one cell northward
+  - kind: motor_history_contains
+    direction: FORWARD
+  - kind: collision_count_eq
+    value: 0
