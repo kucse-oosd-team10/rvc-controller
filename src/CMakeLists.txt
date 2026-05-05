@@ -8,6 +8,7 @@ add_library(rvc_lib
     dust_sensor_subject.cpp
     obstacle_sensor_subject.cpp
     cleaning_manager.cpp
+    avoiding_state.cpp
 )
 
 target_include_directories(rvc_lib
