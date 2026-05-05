@@ -21,12 +21,33 @@ from .world import World
 
 
 class SimMotor(IMotor):
+    """Continuous-motion motor abstraction.
+
+    Real RVC hardware treats ``motor.move(FORWARD)`` as a "keep moving forward
+    until told otherwise" command — wheels spin continuously between calls. To
+    match that semantic in a discrete-tick grid simulator:
+
+    - ``move(FORWARD/BACKWARD)`` immediately advances 1 cell AND latches
+      ``linear_motion`` for end-of-tick continuation.
+    - ``move(LEFT/RIGHT)`` rotates immediately; ``linear_motion`` unchanged.
+    - ``move(STOP)`` clears ``linear_motion``.
+    - ``step_continuous()`` (called by runner end-of-tick) advances 1 cell along
+      ``linear_motion`` only if no ``move()`` was issued this tick — preventing
+      double-stepping on the tick a state transition issues a fresh command.
+    """
+
     def __init__(self, robot: Robot, world: World, *, init_fail_count: int = 0) -> None:
         super().__init__()
         self._robot = robot
         self._world = world
         self.history: List[Direction] = []
         self._init_fail_remaining = init_fail_count
+        self._linear_motion: Direction = Direction.STOP
+        self._commanded_this_tick: bool = False
+
+    @property
+    def linear_motion(self) -> Direction:
+        return self._linear_motion
 
     def initialize(self) -> bool:
         if self._init_fail_remaining > 0:
@@ -36,7 +57,25 @@ class SimMotor(IMotor):
 
     def move(self, direction: Direction) -> None:
         self.history.append(direction)
-        self._robot.move(direction, self._world)
+        self._commanded_this_tick = True
+        if direction in (Direction.FORWARD, Direction.BACKWARD):
+            self._linear_motion = direction
+            self._robot.move(direction, self._world)
+        elif direction in (Direction.LEFT, Direction.RIGHT):
+            self._robot.move(direction, self._world)
+        elif direction == Direction.STOP:
+            self._linear_motion = Direction.STOP
+
+    def step_continuous(self) -> bool:
+        moved = False
+        if (
+            not self._commanded_this_tick
+            and self._linear_motion in (Direction.FORWARD, Direction.BACKWARD)
+        ):
+            self._robot.move(self._linear_motion, self._world)
+            moved = True
+        self._commanded_this_tick = False
+        return moved
 
 
 class SimCleaner(ICleaner):
