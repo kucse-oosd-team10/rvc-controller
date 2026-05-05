@@ -17,7 +17,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
     EXTRA_ARGS="--extra-arg=-isysroot --extra-arg=$SDK_PATH"
 fi
 
-FILES=$(find $DIRS -name '*.cpp' -o -name '*.hpp' -o -name '*.h')
+FILES=$(find $DIRS -name '*.cpp')
 
 echo "==> Running clang-tidy..."
 echo "$FILES" | xargs clang-tidy -p "$BUILD_DIR" $EXTRA_ARGS

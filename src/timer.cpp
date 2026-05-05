@@ -17,8 +17,8 @@ void Timer::setDuration(std::int64_t durationMs) {
     duration_ = durationMs;
 }
 
-void Timer::setCallback(Callback cb) {
-    callback_ = std::move(cb);
+void Timer::setCallback(Callback callback) {
+    callback_ = std::move(callback);
 }
 
 void Timer::start() {
@@ -37,7 +37,7 @@ void Timer::reset() {
 }
 
 bool Timer::isExpired() const {
-    return !isRunning_ ? false : (clock_() - startTime_) >= duration_;
+    return isRunning_ && ((clock_() - startTime_) >= duration_);
 }
 
 bool Timer::isRunning() const {
