@@ -13,36 +13,44 @@ jobs:
   notify-result:
     runs-on: ubuntu-24.04
     steps:
-      - name: Success
-        if: ${{ github.event.workflow_run.conclusion == 'success' }}
+      - name: Notify Discord
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
           RUN_URL="${{ github.event.workflow_run.html_url }}"
+          CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+          ACTOR="${{ github.event.workflow_run.triggering_actor.login }}"
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          EVENT="${{ github.event.workflow_run.event }}"
+
+          JOBS_JSON=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID/jobs")
+
+          JOBS_SUMMARY=$(echo "$JOBS_JSON" | jq -r '.jobs | map("- " + .name + ": " + (if .conclusion == "success" then "[성공]" else "[실패]" end)) | join("\\n")')
+
+          if [ "$CONCLUSION" == "success" ]; then
+            COLOR=65280
+            TITLE="CI Success"
+          else
+            COLOR=16711680
+            TITLE="CI Failed"
+          fi
+
+          PR_TITLE="${{ github.event.workflow_run.pull_requests[0].title }}"
+          PR_INFO=""
+          if [ -n "$PR_TITLE" ]; then
+            PR_INFO="\n**PR:** $PR_TITLE"
+          fi
+
+          DESCRIPTION="**실행자:** $ACTOR\n**이벤트:** $EVENT ($BRANCH)$PR_INFO\n**상태:** $CONCLUSION\n\n**[상세 결과]**\n$JOBS_SUMMARY\n\n[상세 로그 확인]($RUN_URL)"
 
           JSON_PAYLOAD=$(cat <<EOF
           {
             "embeds": [
               {
-                "description": "모든 검사가 성공적으로 완료되었습니다.\n\n[상세 결과 확인]($RUN_URL)",
-                "color": 65280
-              }
-            ]
-          }
-          EOF
-          )
-
-          curl -H "Content-Type: application/json" -X POST -d "$JSON_PAYLOAD" $DISCORD_WEBHOOK
-
-      - name: Failure
-        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-        run: |
-          RUN_URL="${{ github.event.workflow_run.html_url }}"
-
-          JSON_PAYLOAD=$(cat <<EOF
-          {
-            "embeds": [
-              {
-                "description": "코드 검사 또는 빌드 중 오류가 발생했습니다.\n\n[상세 로그 확인]($RUN_URL)",
-                "color": 16711680
+                "title": "$TITLE",
+                "description": "$DESCRIPTION",
+                "color": $COLOR
               }
             ]
           }
