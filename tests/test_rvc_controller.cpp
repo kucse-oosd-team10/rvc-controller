@@ -1,5 +1,6 @@
-#include "rvc/rvc_controller.hpp"
 #include "rvc/i_rvc_state.hpp"
+#include "rvc/rvc_controller.hpp"
+
 #include <gtest/gtest.h>
 
 namespace {
@@ -10,10 +11,12 @@ public:
         enterCalled = true;
         contextPassed = &ctx;
     }
+
     void onExit(rvc::RVCController& ctx) override {
         exitCalled = true;
         contextPassed = &ctx;
     }
+
     void handleObstacle(rvc::RVCController& ctx, bool front, bool left, bool right) override {
         obstacleCalled = true;
         contextPassed = &ctx;
@@ -21,11 +24,13 @@ public:
         lastLeft = left;
         lastRight = right;
     }
+
     void handleDust(rvc::RVCController& ctx, bool detected) override {
         dustCalled = true;
         contextPassed = &ctx;
         lastDust = detected;
     }
+
     void handlePowerOff(rvc::RVCController& ctx) override {
         powerOffCalled = true;
         contextPassed = &ctx;
