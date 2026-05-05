@@ -72,6 +72,8 @@ class CleaningState(IRVCState):
     def onExit(self, ctx): pass
 
     def handleObstacle(self, ctx, front, left, right):
+        if not (front or left or right):
+            return
         ctx.getCleaningManager().stopCleaning()
         ctx.getMovementManager().stop()
         ctx.setState(AvoidingState(front, left, right))
