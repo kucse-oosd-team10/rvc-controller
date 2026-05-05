@@ -1,16 +1,14 @@
 #include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_rvc_state.hpp"
 #include "rvc/i_sensor_observer.hpp"
+#include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
 #include <gtest/gtest.h>
-
-namespace rvc {
-class RVCController {};
-} // namespace rvc
 
 namespace {
 
