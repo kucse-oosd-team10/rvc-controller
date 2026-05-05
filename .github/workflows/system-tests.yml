@@ -1,0 +1,37 @@
+name: System Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "simulator/**"
+      - ".github/workflows/system-tests.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "simulator/**"
+      - ".github/workflows/system-tests.yml"
+
+jobs:
+  scenario-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install simulator (mock backend)
+        working-directory: simulator
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run scenario tests
+        working-directory: simulator
+        env:
+          SDL_VIDEODRIVER: dummy
+        run: python -m pytest -v

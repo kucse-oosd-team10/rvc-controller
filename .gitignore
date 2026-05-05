@@ -34,3 +34,13 @@ cppcheck-report.xml
 .scannerwork/
 
 .clangd
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# OMC scratch
+.omc/
