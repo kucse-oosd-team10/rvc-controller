@@ -8,6 +8,8 @@ RVCController::RVCController() = default;
 RVCController::~RVCController() = default;
 
 void RVCController::powerOn() {
+    // TO BE IMPLEMENTED
+    // Skeleton Code 단계라 구현되지 않았습니다.
 }
 
 void RVCController::powerOff() {
