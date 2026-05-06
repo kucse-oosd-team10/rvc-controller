@@ -108,6 +108,7 @@ TEST_F(CleaningManagerTest, HandleDustDetectedDoesNotPowerUpIfAlreadyPowerUp) {
  * [기대 결과] 먼지 상태만 업데이트되고, 파워 레벨은 타이머 만료 전까지 POWER_UP 유지.
  */
 TEST_F(CleaningManagerTest, HandleDustClearedJustUpdatesState) {
+    manager.startCleaning();
     manager.handleDustDetected(true);
     EXPECT_TRUE(manager.getLatestDustDetected());
 
