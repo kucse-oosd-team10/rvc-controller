@@ -2,8 +2,6 @@
 
 #include "rvc/rvc_controller.hpp"
 
-#include <iostream>
-
 namespace rvc {
 
 void OffState::onEnter(RVCController& ctx) {
