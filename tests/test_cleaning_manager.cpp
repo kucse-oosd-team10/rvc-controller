@@ -1,5 +1,4 @@
 #include "rvc/cleaning_manager.hpp"
-#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/i_cleaner.hpp"
 #include "rvc/types.hpp"
 
@@ -42,7 +41,7 @@ protected:
     MockCleaner cleaner;
     MockClock clock;
     // CleaningManager 인스턴스 초기화 (MockCleaner와 MockClock 사용)
-    rvc::CleaningManager manager{&cleaner, nullptr, [this] {
+    rvc::CleaningManager manager{cleaner, [this] {
                                      return clock.now();
                                  }};
 };
@@ -87,7 +86,7 @@ TEST_F(CleaningManagerTest, HandleDustDetectedTriggersPowerUp) {
     EXPECT_EQ(manager.getPowerLevel(), rvc::PowerLevel::NORMAL);
 
     manager.handleDustDetected(true);
-    EXPECT_TRUE(manager.isDustDetected());
+    EXPECT_TRUE(manager.getLatestDustDetected());
     EXPECT_EQ(cleaner.lastPowerLevel, rvc::PowerLevel::POWER_UP);
     EXPECT_EQ(manager.getPowerLevel(), rvc::PowerLevel::POWER_UP);
 }
@@ -110,10 +109,10 @@ TEST_F(CleaningManagerTest, HandleDustDetectedDoesNotPowerUpIfAlreadyPowerUp) {
  */
 TEST_F(CleaningManagerTest, HandleDustClearedJustUpdatesState) {
     manager.handleDustDetected(true);
-    EXPECT_TRUE(manager.isDustDetected());
+    EXPECT_TRUE(manager.getLatestDustDetected());
 
     manager.handleDustDetected(false);
-    EXPECT_FALSE(manager.isDustDetected());
+    EXPECT_FALSE(manager.getLatestDustDetected());
     EXPECT_EQ(manager.getPowerLevel(), rvc::PowerLevel::POWER_UP);
 }
 
@@ -175,33 +174,12 @@ TEST_F(CleaningManagerTest, StopCleaningStopsTimer) {
 }
 
 /**
- * [상황] 클리너 객체가 Null인 경우 각 메서드 호출
- * [기대 결과] 크래시 없이 안전하게 리턴되어야 함 (방어적 코드 테스트)
- */
-TEST(CleaningManagerNullTest, SafeWithNullCleaner) {
-    MockClock clock;
-    rvc::CleaningManager nullManager{nullptr, nullptr, [&] {
-                                         return clock.now();
-                                     }};
-
-    // 크래시 여부 확인을 위한 호출들
-    EXPECT_NO_THROW(nullManager.startCleaning());
-    EXPECT_NO_THROW(nullManager.stopCleaning());
-    EXPECT_NO_THROW(nullManager.powerUp());
-
-    // Timer expired case with null cleaner
-    nullManager.powerUp();
-    clock.advance(rvc::CleaningManager::powerUpDuration + 1);
-    EXPECT_NO_THROW(nullManager.update());
-}
-
-/**
  * [상황] 먼지 상태 조회
  * [기대 결과] 설정된 먼지 상태를 정확히 반환해야 함.
  */
 TEST_F(CleaningManagerTest, IsDustDetectedReportsCorrectState) {
     manager.handleDustDetected(true);
-    EXPECT_TRUE(manager.isDustDetected());
+    EXPECT_TRUE(manager.getLatestDustDetected());
     manager.handleDustDetected(false);
-    EXPECT_FALSE(manager.isDustDetected());
+    EXPECT_FALSE(manager.getLatestDustDetected());
 }
