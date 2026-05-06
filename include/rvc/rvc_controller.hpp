@@ -9,6 +9,7 @@ class MovementManager;
 class CleaningManager;
 class ObstacleSensorSubject;
 class DustSensorSubject;
+class IObstacleSensor;
 
 class RVCController : public ISensorObserver {
 public:
@@ -27,11 +28,20 @@ public:
     void onDustDetected(bool detected) override;
 
     void setState(IRVCState* state);
+    [[nodiscard]] IRVCState* getCurrentState() const;
 
     MovementManager* getMovementManager();
     CleaningManager* getCleaningManager();
     ObstacleSensorSubject* getObstacleSensorSubject();
     DustSensorSubject* getDustSensorSubject();
+
+    // AvoidingState 의 라이브 IObstacleSensor 조회 경로
+    IObstacleSensor* getObstacleSensor();
+
+    // 생성자 주입(또는 attach API)으로 교체
+    void setMovementManager(MovementManager* manager);
+    void setCleaningManager(CleaningManager* manager);
+    void setObstacleSensor(IObstacleSensor* sensor);
 
 private:
     IRVCState* currentState_{nullptr};
@@ -39,6 +49,7 @@ private:
     CleaningManager* cleaningMgr_{nullptr};
     ObstacleSensorSubject* obstacleSub_{nullptr};
     DustSensorSubject* dustSub_{nullptr};
+    IObstacleSensor* obstacleSensor_{nullptr};
 };
 
 } // namespace rvc

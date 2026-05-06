@@ -2,12 +2,11 @@
 
 #include "rvc/i_rvc_state.hpp"
 
-#include <iostream>
-
 namespace rvc {
+
 class AvoidingState : public IRVCState {
 public:
-    AvoidingState() = default;
+    AvoidingState(bool front, bool left, bool right);
     ~AvoidingState() override = default;
 
     AvoidingState(const AvoidingState&) = delete;
@@ -17,15 +16,14 @@ public:
 
     void onEnter(RVCController& ctx) override;
     void onExit(RVCController& ctx) override;
-
-    void handleObstacle(RVCController& ctx, bool front, bool left, bool right) override {
-        std::cout << "[AvoidingState] handleObstacle을 무시합니다: 회피 동작 우선 수행 중";
-    };
-
-    void handleDust(RVCController& ctx, bool detected) override {
-        std::cout << "[AvoidingState] handleDust를 무시합니다: 회피 동작 우선 수행 중";
-    };
-
+    void handleObstacle(RVCController& ctx, bool front, bool left, bool right) override;
+    void handleDust(RVCController& ctx, bool detected) override;
     void handlePowerOff(RVCController& ctx) override;
+
+private:
+    bool front_;
+    bool left_;
+    bool right_;
 };
+
 } // namespace rvc
