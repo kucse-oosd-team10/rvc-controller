@@ -20,7 +20,7 @@ public:
     RVCController(RVCController&&) = delete;
     RVCController& operator=(RVCController&&) = delete;
 
-    void powerOn();
+    void powerOn() const;
     void powerOff();
 
     void onObstacleDetected(bool front, bool left, bool right) override;

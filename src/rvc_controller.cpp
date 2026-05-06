@@ -7,7 +7,10 @@ namespace rvc {
 RVCController::RVCController() = default;
 RVCController::~RVCController() = default;
 
-void RVCController::powerOn() {
+void RVCController::powerOn() const {
+    // TO BE IMPLEMENTED
+    // Skeleton Code 단계라 구현되지 않았습니다.
+    // 임시로 const로 수정하였습니다.
 }
 
 void RVCController::powerOff() {

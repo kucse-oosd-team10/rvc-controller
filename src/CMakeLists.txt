@@ -4,6 +4,8 @@ add_library(rvc_lib
     timer.cpp
     default_avoid_strategy.cpp
     movement_manager.cpp
+    dust_sensor_subject.cpp
+    cleaning_manager.cpp
 )
 
 target_include_directories(rvc_lib
