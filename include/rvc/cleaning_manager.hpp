@@ -11,7 +11,7 @@ class CleaningManager {
 public:
     static constexpr int powerUpDuration = 3000; // POWER_UP_DURATION
 
-    CleaningManager(ICleaner* cleaner, DustSensorSubject* dustSub, Timer::ClockFn clockFn);
+    explicit CleaningManager(ICleaner& cleaner, DustSensorSubject& dustSub, Timer::ClockFn clockFn);
     ~CleaningManager() = default;
 
     CleaningManager(const CleaningManager&) = delete;
@@ -28,9 +28,9 @@ public:
     bool isDustDetected() const;
 
 private:
-    ICleaner* cleaner_{nullptr};
+    ICleaner& cleaner_;
     PowerLevel powerLevel_{0};
-    DustSensorSubject* dustSub_{nullptr};
+    DustSensorSubject& dustSub_;
     Timer dustTimer_;
 
     bool dustDetected_{false};
