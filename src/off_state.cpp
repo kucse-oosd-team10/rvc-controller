@@ -7,7 +7,6 @@
 namespace rvc {
 
 void OffState::onEnter(RVCController& ctx) {
-    std::cout << "off" << std::endl;
 }
 
 void OffState::onExit(RVCController& ctx) {
