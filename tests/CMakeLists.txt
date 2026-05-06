@@ -15,6 +15,7 @@ add_executable(rvc_tests
     test_default_avoid_strategy.cpp
     test_movement_manager.cpp
     test_dust_sensor_subject.cpp
+    test_obstacle_sensor_subject.cpp
     test_cleaning_manager.cpp
 )
 
