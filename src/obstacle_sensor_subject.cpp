@@ -24,9 +24,7 @@ void ObstacleSensorSubject::notify() {
     auto obsSnapshot = observers_;
 
     for (auto* obs : obsSnapshot) {
-        if (obs != nullptr) {
-            obs->onObstacleDetected(front_, left_, right_);
-        }
+        obs->onObstacleDetected(front_, left_, right_);
     }
 }
 
