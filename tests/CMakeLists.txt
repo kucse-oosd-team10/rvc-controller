@@ -13,6 +13,7 @@ add_executable(rvc_tests
     test_rvc_controller.cpp
     test_timer.cpp
     test_dust_sensor_subject.cpp
+    test_cleaning_manager.cpp
 )
 
 target_link_libraries(rvc_tests
