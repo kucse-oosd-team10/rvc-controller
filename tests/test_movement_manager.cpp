@@ -98,3 +98,9 @@ TEST_F(MovementManagerTest, EscapeLoopWithDirectionChange) {
     manager.executeAvoidance(true, true, true);
     EXPECT_EQ(motor.lastDirection, Direction::LEFT);
 }
+
+TEST_F(MovementManagerTest, testNeedsReverse) {
+    strategy.directionToReturn = Direction::LEFT;
+    bool result = manager.needsReverse(true, true, true);
+    EXPECT_FALSE(result);
+}

@@ -21,6 +21,7 @@ public:
     void turn(Direction direction);
     void stop();
     void executeAvoidance(bool front, bool left, bool right);
+    bool needsReverse(bool front, bool left, bool right) const;
 
 private:
     IMotor& motor_;

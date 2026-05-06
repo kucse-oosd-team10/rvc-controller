@@ -41,4 +41,9 @@ void MovementManager::executeAvoidance(bool front, bool left, bool right) {
     Direction nextDir = strategy_.decideDirection(front, left, right);
     turn(nextDir);
 }
+
+bool MovementManager::needsReverse(bool front, bool left, bool right) const {
+    return strategy_.needsReverse(front, left, right);
+}
+
 } // namespace rvc
