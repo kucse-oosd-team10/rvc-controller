@@ -3,6 +3,11 @@ add_library(rvc_lib
     rvc_controller.cpp
     timer.cpp
     off_state.cpp
+    default_avoid_strategy.cpp
+    movement_manager.cpp
+    dust_sensor_subject.cpp
+    obstacle_sensor_subject.cpp
+    cleaning_manager.cpp
 )
 
 target_include_directories(rvc_lib

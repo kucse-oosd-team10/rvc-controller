@@ -10,8 +10,14 @@ FetchContent_MakeAvailable(googletest)
 add_executable(rvc_tests
     test_device_interfaces.cpp
     test_pattern_interfaces.cpp
+    test_rvc_controller.cpp
     test_timer.cpp
     test_off_state.cpp
+    test_default_avoid_strategy.cpp
+    test_movement_manager.cpp
+    test_dust_sensor_subject.cpp
+    test_obstacle_sensor_subject.cpp
+    test_cleaning_manager.cpp
 )
 
 target_link_libraries(rvc_tests

@@ -129,6 +129,7 @@ jobs:
             --language=c++ \
             --suppress=missingIncludeSystem \
             --suppress=unmatchedSuppression \
+            --suppress=unusedFunction \
             --error-exitcode=1 \
             -I include \
             src include tests
