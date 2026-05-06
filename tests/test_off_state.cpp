@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-namespace rvc {
+using namespace rvc;
 
 // 1. Spy 클래스: onExit가 호출되는지 감시합니다.
 class SpyOffState : public OffState {
@@ -19,10 +19,10 @@ public:
 class OffStateTest : public ::testing::Test {
 protected:
     RVCController controller;
+    OffState state;
 };
 
-TEST_F(OffStateTest, OnEnterHandlesNullManagers) {
-    OffState state;
+TEST_F(OffStateTest, onEnter) {
     EXPECT_NO_THROW(state.onEnter(controller));
 }
 
@@ -54,5 +54,3 @@ TEST_F(OffStateTest, HandleDustDoesNotTransition) {
     spyState.handleDust(controller, true);
     EXPECT_FALSE(spyState.onExitCalled);
 }
-
-} // namespace rvc
