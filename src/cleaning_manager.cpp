@@ -34,7 +34,7 @@ void CleaningManager::powerUp() {
 
 void CleaningManager::handleDustDetected(bool detected) {
     latestDustDetected_ = detected;
-    if (detected && (powerLevel_ != PowerLevel::POWER_UP)) {
+    if (detected && (powerLevel_ == PowerLevel::NORMAL)) {
         powerUp();
     }
 }
