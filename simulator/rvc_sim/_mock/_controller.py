@@ -69,6 +69,8 @@ class RVCController:
         print("Off")
 
     def tick(self) -> None:
+        if self._current_state is not None:
+            self._current_state.update(self)
         self._obstacle_sub.poll()
         self._dust_sub.poll()
         self._cleaning_mgr.update()
