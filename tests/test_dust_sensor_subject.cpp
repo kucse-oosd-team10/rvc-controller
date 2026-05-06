@@ -39,8 +39,8 @@ class DustSensorSubjectTest : public ::testing::Test {
 protected:
     MockDustSensor sensor;
     rvc::DustSensorSubject subject{sensor};
-    MockSensorObserver observer1;
-    MockSensorObserver observer2;
+    [[maybe_unused]] MockSensorObserver observer1;
+    [[maybe_unused]] MockSensorObserver observer2;
 };
 
 TEST_F(DustSensorSubjectTest, InitialStateIsNoDust) {
