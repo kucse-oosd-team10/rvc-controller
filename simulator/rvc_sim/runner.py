@@ -152,6 +152,7 @@ class SimulationRunner:
                 break
 
             self.clock.advance(self.tick_duration_ms)
+            self.motor.begin_tick()
             self.controller.tick()
             self.motor.step_continuous()
 

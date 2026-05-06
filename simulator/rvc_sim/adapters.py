@@ -17,6 +17,7 @@ from .rvc import (
     IObstacleSensor,
     PowerLevel,
 )
+from .types import Pose
 from .world import World
 
 
@@ -44,6 +45,7 @@ class SimMotor(IMotor):
         self._init_fail_remaining = init_fail_count
         self._linear_motion: Direction = Direction.STOP
         self._commanded_this_tick: bool = False
+        self.tick_pose_log: List[Pose] = []
 
     @property
     def linear_motion(self) -> Direction:
@@ -55,6 +57,9 @@ class SimMotor(IMotor):
             return False
         return True
 
+    def begin_tick(self) -> None:
+        self.tick_pose_log.clear()
+
     def move(self, direction: Direction) -> None:
         self.history.append(direction)
         self._commanded_this_tick = True
@@ -65,6 +70,7 @@ class SimMotor(IMotor):
             self._robot.move(direction, self._world)
         elif direction == Direction.STOP:
             self._linear_motion = Direction.STOP
+        self.tick_pose_log.append(self._robot.pose)
 
     def step_continuous(self) -> bool:
         moved = False
@@ -73,6 +79,7 @@ class SimMotor(IMotor):
             and self._linear_motion in (Direction.FORWARD, Direction.BACKWARD)
         ):
             self._robot.move(self._linear_motion, self._world)
+            self.tick_pose_log.append(self._robot.pose)
             moved = True
         self._commanded_this_tick = False
         return moved

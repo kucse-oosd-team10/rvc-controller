@@ -57,7 +57,7 @@ class PygameRenderer:
         h = runner.world.height * self.cell_px + HUD_HEIGHT_PX
         self._screen = pygame.display.set_mode((w, h))
         pygame.display.set_caption(f"rvc-sim — {runner.scenario.name}")
-        self._font = pygame.font.SysFont("monospace", 14)
+        self._font = pygame.font.Font(None, 16)
         self._clock = pygame.time.Clock()
         self._initialized = True
 
@@ -120,33 +120,46 @@ class PygameRenderer:
         self._ensure_init(runner)
         assert self._clock is not None
 
-        cur_x = float(runner.robot.x)
-        cur_y = float(runner.robot.y)
-        cur_angle = _heading_angle_deg(runner.robot.heading)
+        cur_pose = (
+            float(runner.robot.x),
+            float(runner.robot.y),
+            _heading_angle_deg(runner.robot.heading),
+        )
 
         if self._prev_pose is None:
-            self._prev_pose = (cur_x, cur_y, cur_angle)
+            self._prev_pose = cur_pose
 
-        prev_x, prev_y, prev_angle = self._prev_pose
-        delta_angle = _shortest_angle(prev_angle, cur_angle)
+        waypoints: list[Tuple[float, float, float]] = [self._prev_pose]
+        for p in runner.motor.tick_pose_log:
+            waypoints.append(
+                (float(p.x), float(p.y), _heading_angle_deg(p.heading))
+            )
+        if len(waypoints) == 1:
+            waypoints.append(cur_pose)
 
-        tick_ms = runner.tick_duration_ms
-        elapsed = 0
-        while elapsed < tick_ms:
-            for ev in pygame.event.get():
-                if ev.type == pygame.QUIT:
-                    return False
-                if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
-                    return False
-            t = min(1.0, elapsed / max(1, tick_ms))
-            ix = prev_x + (cur_x - prev_x) * t
-            iy = prev_y + (cur_y - prev_y) * t
-            iang = prev_angle + delta_angle * t
-            self._draw_world(runner)
-            self._draw_robot(ix, iy, iang)
-            self._draw_hud(runner)
-            pygame.display.flip()
-            elapsed += self._clock.tick(self.fps)
+        n_segments = len(waypoints) - 1
+        seg_ms = max(1, runner.tick_duration_ms // n_segments)
 
-        self._prev_pose = (cur_x, cur_y, cur_angle)
+        for i in range(n_segments):
+            a = waypoints[i]
+            b = waypoints[i + 1]
+            delta_angle = _shortest_angle(a[2], b[2])
+            elapsed = 0
+            while elapsed < seg_ms:
+                for ev in pygame.event.get():
+                    if ev.type == pygame.QUIT:
+                        return False
+                    if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                        return False
+                t = min(1.0, elapsed / max(1, seg_ms))
+                ix = a[0] + (b[0] - a[0]) * t
+                iy = a[1] + (b[1] - a[1]) * t
+                iang = a[2] + delta_angle * t
+                self._draw_world(runner)
+                self._draw_robot(ix, iy, iang)
+                self._draw_hud(runner)
+                pygame.display.flip()
+                elapsed += self._clock.tick(self.fps)
+
+        self._prev_pose = cur_pose
         return True
