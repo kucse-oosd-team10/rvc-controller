@@ -2,7 +2,6 @@
 
 #include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_motor.hpp"
-#include "rvc/i_obstacle_sensor.hpp"
 
 namespace rvc {
 
