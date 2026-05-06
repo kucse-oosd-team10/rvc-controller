@@ -2,9 +2,8 @@
 
 namespace rvc {
 
-CleaningManager::CleaningManager(ICleaner& cleaner, DustSensorSubject& dustSub,
-                                 Timer::ClockFn clockFn)
-    : cleaner_(cleaner), dustSub_(dustSub), dustTimer_(std::move(clockFn)) {
+CleaningManager::CleaningManager(ICleaner& cleaner, Timer::ClockFn clockFn)
+    : cleaner_(cleaner), dustTimer_(std::move(clockFn)) {
     dustTimer_.setDuration(powerUpDuration);
     dustTimer_.setCallback([this] {
         onTimerExpired();
@@ -12,6 +11,11 @@ CleaningManager::CleaningManager(ICleaner& cleaner, DustSensorSubject& dustSub,
 }
 
 void CleaningManager::startCleaning() {
+    if (latestDustDetected_) {
+        powerUp();
+        return;
+    }
+
     cleaner_.setPower(PowerLevel::NORMAL);
     powerLevel_ = PowerLevel::NORMAL;
 }
@@ -29,7 +33,7 @@ void CleaningManager::powerUp() {
 }
 
 void CleaningManager::handleDustDetected(bool detected) {
-    dustDetected_ = detected;
+    latestDustDetected_ = detected;
     if (detected && (powerLevel_ != PowerLevel::POWER_UP)) {
         powerUp();
     }
@@ -43,12 +47,12 @@ PowerLevel CleaningManager::getPowerLevel() const {
     return powerLevel_;
 }
 
-bool CleaningManager::isDustDetected() const {
-    return dustDetected_;
+bool CleaningManager::getLatestDustDetected() const {
+    return latestDustDetected_;
 }
 
 void CleaningManager::onTimerExpired() {
-    if (dustDetected_) { // POWER-UP 유지
+    if (latestDustDetected_) { // POWER-UP 유지
         dustTimer_.reset();
         dustTimer_.start();
         return;
