@@ -2,8 +2,8 @@
 add_library(rvc_lib
     rvc_controller.cpp
     timer.cpp
-    DefaultAvoidStrategy.cpp
-    MovementManager.cpp
+    default_avoid_strategy.cpp
+    movement_manager.cpp
 )
 
 target_include_directories(rvc_lib

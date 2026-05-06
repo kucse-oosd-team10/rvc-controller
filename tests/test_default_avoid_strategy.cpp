@@ -1,4 +1,4 @@
-#include "rvc/DefaultAvoidStrategy.hpp"
+#include "rvc/default_avoid_strategy.hpp"
 
 #include <gtest/gtest.h>
 

@@ -5,7 +5,6 @@
 namespace rvc {
 class IMotor;
 class IAvoidStrategy;
-class IObstacleSensor;
 
 class MovementManager {
 public:
@@ -24,8 +23,8 @@ public:
     void executeAvoidance(bool front, bool left, bool right);
 
 private:
-    IMotor* motor_{nullptr};
-    IAvoidStrategy* strategy_{nullptr};
+    IMotor& motor_;
+    IAvoidStrategy& strategy_;
     Direction LastDirection_{Direction::STOP};
 };
 } // namespace rvc

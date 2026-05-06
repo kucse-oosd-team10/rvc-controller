@@ -1,87 +1,100 @@
-#include "rvc/MovementManager.hpp"
 #include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_motor.hpp"
-#include "rvc/i_obstacle_sensor.hpp"
-
-#include <gmock/gmock.h>
+#include "rvc/movement_manager.hpp"
 
 #include <gtest/gtest.h>
 
 using namespace rvc;
 
-class MockMotor : public IMotor {
+class TestMotor : public IMotor {
 public:
-    MOCK_METHOD(bool, initialize, (), (override));
-    MOCK_METHOD(void, move, (Direction direction), (override));
+    Direction lastDirection{Direction::STOP};
+    int moveCount{0};
+
+    bool initialize() override {
+        return true;
+    }
+
+    void move(Direction direction) override {
+        lastDirection = direction;
+        moveCount++;
+    }
 };
 
-class MockStrategy : public IAvoidStrategy {
+class TestStrategy : public IAvoidStrategy {
 public:
-    MOCK_METHOD(Direction, decideDirection, (bool front, bool left, bool right), (override));
-    MOCK_METHOD(bool, needsReverse, (bool front, bool left, bool right), (override));
+    Direction directionToReturn{Direction::STOP};
+
+    Direction decideDirection(bool front, bool left, bool right) override {
+        return directionToReturn;
+    }
+
+    bool needsReverse(bool front, bool left, bool right) override {
+        return false;
+    }
 };
 
 class MovementManagerTest : public ::testing::Test {
 protected:
-    MockMotor motor;
-    MockStrategy strategy;
+    TestMotor motor;
+    TestStrategy strategy;
     MovementManager manager{motor, strategy};
 };
 
 TEST_F(MovementManagerTest, MoveForward) {
-    EXPECT_CALL(motor, move(Direction::FORWARD)).Times(1);
     manager.moveForward();
+    EXPECT_EQ(motor.lastDirection, Direction::FORWARD);
+    EXPECT_EQ(motor.moveCount, 1);
 }
 
 TEST_F(MovementManagerTest, MoveBackward) {
-    EXPECT_CALL(motor, move(Direction::BACKWARD)).Times(1);
     manager.moveBackward();
+    EXPECT_EQ(motor.lastDirection, Direction::BACKWARD);
+    EXPECT_EQ(motor.moveCount, 1);
 }
 
-TEST_F(MovementManagerTest, TurnLeft) {
-    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
+TEST_F(MovementManagerTest, TurnLeftAndRight) {
     manager.turn(Direction::LEFT);
-}
+    EXPECT_EQ(motor.lastDirection, Direction::LEFT);
 
-TEST_F(MovementManagerTest, TurnRight) {
-    EXPECT_CALL(motor, move(Direction::RIGHT)).Times(1);
     manager.turn(Direction::RIGHT);
+    EXPECT_EQ(motor.lastDirection, Direction::RIGHT);
 }
 
-TEST_F(MovementManagerTest, Stop) {
+TEST_F(MovementManagerTest, StopAfterMoving) {
     manager.moveForward();
-    EXPECT_CALL(motor, move(Direction::STOP)).Times(1);
+    int currentCount = motor.moveCount;
+
     manager.stop();
+    EXPECT_EQ(motor.lastDirection, Direction::STOP);
+    EXPECT_EQ(motor.moveCount, currentCount + 1);
+}
+
+TEST_F(MovementManagerTest, ShouldNotMoveMotorIfAlreadyInSameDirection) {
+    manager.moveForward();
+    manager.moveForward();
+
+    EXPECT_EQ(motor.moveCount, 1);
 }
 
 TEST_F(MovementManagerTest, AvoidanceWithoutReverseTurnLeft) {
-    EXPECT_CALL(strategy, needsReverse(true, false, false)).WillOnce(testing::Return(false));
-    EXPECT_CALL(strategy, decideDirection(true, false, false))
-        .WillOnce(testing::Return(Direction::LEFT));
-    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
+    strategy.directionToReturn = Direction::LEFT;
+
     manager.executeAvoidance(true, false, false);
+    EXPECT_EQ(motor.lastDirection, Direction::LEFT);
 }
 
 TEST_F(MovementManagerTest, AvoidanceWithoutReverseTurnRight) {
-    EXPECT_CALL(strategy, needsReverse(true, true, false)).WillOnce(testing::Return(false));
-    EXPECT_CALL(strategy, decideDirection(true, true, false))
-        .WillOnce(testing::Return(Direction::RIGHT));
-    EXPECT_CALL(motor, move(Direction::RIGHT)).Times(1);
+    strategy.directionToReturn = Direction::RIGHT;
+
     manager.executeAvoidance(true, true, false);
+    EXPECT_EQ(motor.lastDirection, Direction::RIGHT);
 }
 
-TEST_F(MovementManagerTest, EscapeLoopWithLeftTurn) {
-    EXPECT_CALL(strategy, needsReverse(true, true, true)).WillOnce(testing::Return(true));
-    EXPECT_CALL(strategy, decideDirection(true, true, true))
-        .WillOnce(testing::Return(Direction::LEFT));
-    EXPECT_CALL(motor, move(Direction::LEFT)).Times(1);
-    manager.executeAvoidance(true, true, true);
-}
+TEST_F(MovementManagerTest, EscapeLoopWithDirectionChange) {
+    // 사방이 막힌 상황(true, true, true) 가정
+    strategy.directionToReturn = Direction::LEFT;
 
-TEST_F(MovementManagerTest, EscapeLoopWithRightTurn) {
-    EXPECT_CALL(strategy, needsReverse(true, true, true)).WillOnce(testing::Return(true));
-    EXPECT_CALL(strategy, decideDirection(true, true, true))
-        .WillOnce(testing::Return(Direction::RIGHT));
-    EXPECT_CALL(motor, move(Direction::RIGHT)).Times(1);
     manager.executeAvoidance(true, true, true);
+    EXPECT_EQ(motor.lastDirection, Direction::LEFT);
 }

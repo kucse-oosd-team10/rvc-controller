@@ -1,4 +1,4 @@
-#include "rvc/DefaultAvoidStrategy.hpp"
+#include "rvc/default_avoid_strategy.hpp"
 
 namespace rvc {
 Direction DefaultAvoidStrategy::decideDirection(bool front, bool left, bool right) {
