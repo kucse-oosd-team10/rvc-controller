@@ -21,7 +21,7 @@ public:
     void detach(ISensorObserver* obs) override;
     void notify() override;
     void poll();
-    bool isDustDetected() const;
+    [[nodiscard]] bool isDustDetected() const;
 
 private:
     IDustSensor& sensor_;
