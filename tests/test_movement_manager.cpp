@@ -21,20 +21,10 @@ public:
     MOCK_METHOD(bool, needsReverse, (bool front, bool left, bool right), (override));
 };
 
-class MockSensor : public IObstacleSensor {
-public:
-    // MOCK_METHOD(반환타입, 함수이름, (인자), (한정자));
-    MOCK_METHOD(bool, initialize, (), (override));
-    MOCK_METHOD(bool, isFrontDetected, (), (override));
-    MOCK_METHOD(bool, isLeftDetected, (), (override));
-    MOCK_METHOD(bool, isRightDetected, (), (override));
-};
-
 class MovementManagerTest : public ::testing::Test {
 protected:
     MockMotor motor;
     MockStrategy strategy;
-    MockSensor sensor;
     MovementManager manager{motor, strategy};
 };
 
