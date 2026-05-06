@@ -1,6 +1,8 @@
 #include "rvc/cleaning_state.hpp"
 
-#include "rvc/i_rvc_state.hpp"
+#include "rvc/cleaning_manager.hpp"
+#include "rvc/movement_manager.hpp"
+#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 
 namespace rvc {
@@ -8,54 +10,54 @@ namespace rvc {
 void CleaningState::onEnter(RVCController& ctx) {
     MovementManager* movementMgr = ctx.getMovementManager();
     if (movementMgr != nullptr) {
-        // movementMgr->moveForward();
+        movementMgr->moveForward();
     }
 
     CleaningManager* cleaningMgr = ctx.getCleaningManager();
     if (cleaningMgr != nullptr) {
-        // cleaningMgr->startCleaning();
+        cleaningMgr->startCleaning();
     }
 }
 
-void CleaningState::onExit(RVCController& ctx) {
-    // 구현 예정
+void CleaningState::onExit(RVCController& /*ctx*/) {
 }
 
-void CleaningState::handlePowerOff(RVCController& ctx) {
+void CleaningState::handleObstacle(RVCController& ctx, bool /*front*/, bool /*left*/,
+                                   bool /*right*/) {
     CleaningManager* cleaningMgr = ctx.getCleaningManager();
     if (cleaningMgr != nullptr) {
-        // cleaningMgr->stopCleaning();
+        cleaningMgr->stopCleaning();
     }
 
     MovementManager* movementMgr = ctx.getMovementManager();
     if (movementMgr != nullptr) {
-        // movementMgr->stop();
+        movementMgr->stop();
     }
 
-    IRVCState* offState = nullptr; // 추후 변경 예정
-    ctx.setState(offState);
-}
-
-void CleaningState::handleObstacle(RVCController& ctx, bool front, bool left, bool right) {
-    CleaningManager* cleaningMgr = ctx.getCleaningManager();
-    if (cleaningMgr != nullptr) {
-        // cleaningMgr->stopCleaning();
-    }
-
-    MovementManager* movementMgr = ctx.getMovementManager();
-    if (movementMgr != nullptr) {
-        // moveMentMgr->stop();
-    }
-
-    IRVCState* avoidingState = nullptr; // 추후 변경 예정
-    ctx.setState(avoidingState);
+    // AvoidingState merge 시 setState(new AvoidingState(front, left, right)) 등으로 교체.
+    ctx.setState(nullptr);
 }
 
 void CleaningState::handleDust(RVCController& ctx, bool detected) {
     CleaningManager* cleaningMgr = ctx.getCleaningManager();
     if (cleaningMgr != nullptr) {
-        // cleaningMgr->handleDustDetected(detected);
+        cleaningMgr->handleDustDetected(detected);
     }
+}
+
+void CleaningState::handlePowerOff(RVCController& ctx) {
+    CleaningManager* cleaningMgr = ctx.getCleaningManager();
+    if (cleaningMgr != nullptr) {
+        cleaningMgr->stopCleaning();
+    }
+
+    MovementManager* movementMgr = ctx.getMovementManager();
+    if (movementMgr != nullptr) {
+        movementMgr->stop();
+    }
+
+    static OffState offState;
+    ctx.setState(&offState);
 }
 
 } // namespace rvc

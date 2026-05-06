@@ -43,6 +43,14 @@ public:
     void setCleaningManager(CleaningManager* manager);
     void setObstacleSensor(IObstacleSensor* sensor);
 
+    void setObstacleSensorSubject(ObstacleSensorSubject* obstacleSub) {
+        obstacleSub_ = obstacleSub;
+    }
+
+    void setDustSensorSubject(DustSensorSubject* dustSub) {
+        dustSub_ = dustSub;
+    }
+
 private:
     IRVCState* currentState_{nullptr};
     MovementManager* movementMgr_{nullptr};

@@ -8,6 +8,11 @@ public:
     CleaningState() = default;
     ~CleaningState() override = default;
 
+    CleaningState(const CleaningState&) = delete;
+    CleaningState& operator=(const CleaningState&) = delete;
+    CleaningState(CleaningState&&) = delete;
+    CleaningState& operator=(CleaningState&&) = delete;
+
     void onEnter(RVCController& ctx) override;
     void onExit(RVCController& ctx) override;
 
