@@ -183,3 +183,30 @@ TEST_F(CleaningManagerTest, IsDustDetectedReportsCorrectState) {
     manager.handleDustDetected(false);
     EXPECT_FALSE(manager.getLatestDustDetected());
 }
+
+/**
+ * [상황] 청소 시작 전(OFF)에서 먼지가 감지되었을 때
+ * [기대 결과] 파워 레벨이 변경되지 않아야 함(OFF)
+ */
+TEST_F(CleaningManagerTest, OffStateDustDetectedUnchanged) {
+    EXPECT_EQ(manager.getPowerLevel(), rvc::PowerLevel::OFF);
+
+    manager.handleDustDetected(true);
+
+    // LatestDustDetected는 업데이트 되지만, PowerLevel은 동일
+    EXPECT_TRUE(manager.getLatestDustDetected());
+    EXPECT_EQ(cleaner.lastPowerLevel, rvc::PowerLevel::OFF);
+    EXPECT_EQ(manager.getPowerLevel(), rvc::PowerLevel::OFF);
+}
+
+/**
+ * [상황] OFF 상태에서 먼지가 감지된 후 청소를 시작할 때
+ * [기대 결과] 바로 POWER_UP 모드로 시작
+ */
+TEST_F(CleaningManagerTest, StartCleaningWithPowerUpLevel) {
+    manager.handleDustDetected(true);
+    manager.startCleaning();
+
+    EXPECT_EQ(manager.getPowerLevel(), rvc::PowerLevel::POWER_UP);
+    EXPECT_EQ(cleaner.lastPowerLevel, rvc::PowerLevel::POWER_UP);
+}
