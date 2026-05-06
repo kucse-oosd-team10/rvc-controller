@@ -4,7 +4,7 @@
 
 namespace rvc {
 
-DustSensorSubject::DustSensorSubject(IDustSensor* sensor) : sensor_(sensor) {
+DustSensorSubject::DustSensorSubject(IDustSensor& sensor) : sensor_(sensor) {
 }
 
 void DustSensorSubject::attach(ISensorObserver* obs) {
@@ -31,11 +31,7 @@ void DustSensorSubject::notify() {
 }
 
 void DustSensorSubject::poll() {
-    if (sensor_ == nullptr) {
-        return;
-    }
-
-    const bool newDust = sensor_->isDustDetected();
+    const bool newDust = sensor_.isDustDetected();
     if (dustDetected_ != newDust) {
         dustDetected_ = newDust;
         notify();

@@ -9,7 +9,7 @@ namespace rvc {
 
 class DustSensorSubject : public ISensorSubject {
 public:
-    explicit DustSensorSubject(IDustSensor* sensor);
+    explicit DustSensorSubject(IDustSensor& sensor);
     ~DustSensorSubject() override = default;
 
     DustSensorSubject(const DustSensorSubject&) = delete;
@@ -24,7 +24,7 @@ public:
     bool isDustDetected() const;
 
 private:
-    IDustSensor* sensor_{nullptr};
+    IDustSensor& sensor_;
     std::vector<ISensorObserver*> observers_;
     bool dustDetected_{false};
 };
