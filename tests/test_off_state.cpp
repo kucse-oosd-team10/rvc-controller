@@ -16,17 +16,13 @@ public:
     bool onExitCalled{false};
 };
 
-// 2. 테스트 픽스처 (Fixture)
 class OffStateTest : public ::testing::Test {
 protected:
     RVCController controller;
-    OffState state;
 };
 
-// 3. 테스트 케이스들
-
 TEST_F(OffStateTest, OnEnterHandlesNullManagers) {
-    // onEnter 실행 시 예외나 크래시가 없는지 확인합니다.
+    OffState state;
     EXPECT_NO_THROW(state.onEnter(controller));
 }
 
