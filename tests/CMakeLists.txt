@@ -12,6 +12,7 @@ add_executable(rvc_tests
     test_pattern_interfaces.cpp
     test_rvc_controller.cpp
     test_timer.cpp
+    test_off_state.cpp
     test_default_avoid_strategy.cpp
     test_movement_manager.cpp
     test_dust_sensor_subject.cpp

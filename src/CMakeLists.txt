@@ -2,6 +2,7 @@
 add_library(rvc_lib
     rvc_controller.cpp
     timer.cpp
+    off_state.cpp
     default_avoid_strategy.cpp
     movement_manager.cpp
     dust_sensor_subject.cpp
