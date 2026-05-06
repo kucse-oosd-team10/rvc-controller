@@ -38,7 +38,7 @@ public:
 class DustSensorSubjectTest : public ::testing::Test {
 protected:
     MockDustSensor sensor;
-    rvc::DustSensorSubject subject{&sensor};
+    rvc::DustSensorSubject subject{sensor};
     MockSensorObserver observer1;
     MockSensorObserver observer2;
 };
@@ -130,15 +130,4 @@ TEST_F(DustSensorSubjectTest, NotifyMethodNotifiesObserversExplicitly) {
     subject.notify(); // notifies again with same state
     EXPECT_EQ(observer1.call_count, 2);
     EXPECT_TRUE(observer1.last_detected);
-}
-
-TEST_F(DustSensorSubjectTest, PollWithNullSensorDoesNothing) {
-    rvc::DustSensorSubject nullSubject{nullptr};
-    nullSubject.attach(&observer1);
-
-    // This should not crash and should not notify
-    nullSubject.poll();
-
-    EXPECT_EQ(observer1.call_count, 0);
-    EXPECT_FALSE(nullSubject.isDustDetected());
 }
