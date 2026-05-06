@@ -5,6 +5,7 @@ add_library(rvc_lib
     default_avoid_strategy.cpp
     movement_manager.cpp
     dust_sensor_subject.cpp
+    obstacle_sensor_subject.cpp
     cleaning_manager.cpp
 )
 
