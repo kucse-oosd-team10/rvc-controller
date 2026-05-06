@@ -39,8 +39,8 @@ class DustSensorSubjectTest : public ::testing::Test {
 protected:
     MockDustSensor sensor;
     rvc::DustSensorSubject subject{sensor};
-    [[maybe_unused]] MockSensorObserver observer1;
-    [[maybe_unused]] MockSensorObserver observer2;
+    // MockSensorObserver observer1;
+    // MockSensorObserver observer2;
 };
 
 TEST_F(DustSensorSubjectTest, InitialStateIsNoDust) {
@@ -48,86 +48,94 @@ TEST_F(DustSensorSubjectTest, InitialStateIsNoDust) {
 }
 
 TEST_F(DustSensorSubjectTest, PollNotifiesWhenDustDetected) {
-    subject.attach(&observer1);
+    MockSensorObserver obs;
+    subject.attach(&obs);
     sensor.dust_detected = true;
 
     subject.poll();
 
     EXPECT_TRUE(subject.isDustDetected());
-    EXPECT_EQ(observer1.call_count, 1);
-    EXPECT_TRUE(observer1.last_detected);
+    EXPECT_EQ(obs.call_count, 1);
+    EXPECT_TRUE(obs.last_detected);
 }
 
 TEST_F(DustSensorSubjectTest, PollDoesNotNotifyIfStateUnchanged) {
-    subject.attach(&observer1);
+    MockSensorObserver obs;
+    subject.attach(&obs);
     sensor.dust_detected = false;
 
     subject.poll();
 
     EXPECT_FALSE(subject.isDustDetected());
-    EXPECT_EQ(observer1.call_count, 0);
+    EXPECT_EQ(obs.call_count, 0);
 }
 
 TEST_F(DustSensorSubjectTest, PollNotifiesWhenDustCleared) {
-    subject.attach(&observer1);
+    MockSensorObserver obs;
+    subject.attach(&obs);
 
     // First detect dust
     sensor.dust_detected = true;
     subject.poll();
-    EXPECT_EQ(observer1.call_count, 1);
+    EXPECT_EQ(obs.call_count, 1);
 
     // Then clear dust
     sensor.dust_detected = false;
     subject.poll();
 
     EXPECT_FALSE(subject.isDustDetected());
-    EXPECT_EQ(observer1.call_count, 2);
-    EXPECT_FALSE(observer1.last_detected);
+    EXPECT_EQ(obs.call_count, 2);
+    EXPECT_FALSE(obs.last_detected);
 }
 
 TEST_F(DustSensorSubjectTest, MultipleObserversNotified) {
-    subject.attach(&observer1);
-    subject.attach(&observer2);
+    MockSensorObserver obs1;
+    MockSensorObserver obs2;
+    subject.attach(&obs1);
+    subject.attach(&obs2);
     sensor.dust_detected = true;
 
     subject.poll();
 
-    EXPECT_EQ(observer1.call_count, 1);
-    EXPECT_TRUE(observer1.last_detected);
-    EXPECT_EQ(observer2.call_count, 1);
-    EXPECT_TRUE(observer2.last_detected);
+    EXPECT_EQ(obs1.call_count, 1);
+    EXPECT_TRUE(obs1.last_detected);
+    EXPECT_EQ(obs2.call_count, 1);
+    EXPECT_TRUE(obs2.last_detected);
 }
 
 TEST_F(DustSensorSubjectTest, DetachedObserverNotNotified) {
-    subject.attach(&observer1);
-    subject.detach(&observer1);
+    MockSensorObserver obs1;
+    subject.attach(&obs1);
+    subject.detach(&obs1);
     sensor.dust_detected = true;
 
     subject.poll();
 
-    EXPECT_EQ(observer1.call_count, 0);
+    EXPECT_EQ(obs1.call_count, 0);
 }
 
 TEST_F(DustSensorSubjectTest, DuplicateAttachHasNoEffect) {
-    subject.attach(&observer1);
-    subject.attach(&observer1);
+    MockSensorObserver obs1;
+    subject.attach(&obs1);
+    subject.attach(&obs1);
     sensor.dust_detected = true;
 
     subject.poll();
 
-    EXPECT_EQ(observer1.call_count, 1);
+    EXPECT_EQ(obs1.call_count, 1);
 }
 
 TEST_F(DustSensorSubjectTest, NotifyMethodNotifiesObserversExplicitly) {
-    subject.attach(&observer1);
+    MockSensorObserver obs1;
+    subject.attach(&obs1);
     // Note: notify() uses the current dustDetected_ state, not sensor state.
     // dustDetected_ is updated by poll().
 
     sensor.dust_detected = true;
     subject.poll(); // notifies once
-    EXPECT_EQ(observer1.call_count, 1);
+    EXPECT_EQ(obs1.call_count, 1);
 
     subject.notify(); // notifies again with same state
-    EXPECT_EQ(observer1.call_count, 2);
-    EXPECT_TRUE(observer1.last_detected);
+    EXPECT_EQ(obs1.call_count, 2);
+    EXPECT_TRUE(obs1.last_detected);
 }
