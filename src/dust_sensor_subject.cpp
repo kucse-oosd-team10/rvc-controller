@@ -21,7 +21,9 @@ void DustSensorSubject::detach(ISensorObserver* obs) {
 }
 
 void DustSensorSubject::notify() {
-    for (auto* obs : observers_) {
+    auto obsSnapshot = observers_;
+
+    for (auto* obs : obsSnapshot) {
         if (obs != nullptr) {
             obs->onDustDetected(dustDetected_);
         }
