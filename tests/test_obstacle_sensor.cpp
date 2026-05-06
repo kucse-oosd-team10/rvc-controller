@@ -1,7 +1,9 @@
-#include "rvc/ObstacleSensorSubject.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -76,53 +78,41 @@ protected:
     };
 
     // Helper to get raw pointer for setting states before moving to subject
-    MockSensor* rawFrontSensor;
-    MockSensor* rawLeftSensor;
-    MockSensor* rawRightSensor;
-    std::unique_ptr<MockSensor> frontSensor;
-    std::unique_ptr<MockSensor> leftSensor;
-    std::unique_ptr<MockSensor> rightSensor;
+    MockSensor* rawSensor = nullptr;
+    std::unique_ptr<MockSensor> sensor;
 
     // cppcheck-suppress unusedFunction
     void SetUp() override {
-        frontSensor = std::make_unique<MockSensor>();
-        leftSensor = std::make_unique<MockSensor>();
-        rightSensor = std::make_unique<MockSensor>();
-        rawFrontSensor = frontSensor.get();
-        rawLeftSensor = leftSensor.get();
-        rawRightSensor = rightSensor.get();
+        sensor = std::make_unique<MockSensor>();
+        rawSensor = sensor.get();
     }
 };
+// notify 로직 변경으로 인해 아래 테스트들은 의미가 없어졌습니다. 추후 poll()과 onInterrupt() 테스트로 대체할 예정입니다.
+// TEST_F(ObstacleSensorTest, ObserverReceivesUpdates) {
+//     ObstacleSensorSubject subject{std::move(sensor)};
+//     MockObserver observer;
+//     subject.attach(&observer);
 
-TEST_F(ObstacleSensorTest, ObserverReceivesUpdates) {
-    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
-                                  std::move(rightSensor)};
-    MockObserver observer;
-    subject.attach(&observer);
+//     // Initially no obstacle
+//     EXPECT_FALSE(observer.lastFront());
+//     EXPECT_EQ(observer.updateCount(), 0);
 
-    // Initially no obstacle
-    EXPECT_FALSE(observer.lastFront());
-    EXPECT_EQ(observer.updateCount(), 0);
+//     // Notify observer multiple times
+//     subject.notify();
+//     EXPECT_EQ(observer.updateCount(), 1);
+//     EXPECT_FALSE(observer.lastFront());
 
-    // Notify observer multiple times
-    subject.notify();
-    EXPECT_EQ(observer.updateCount(), 1);
-    EXPECT_FALSE(observer.lastFront());
-
-    // Set obstacle and notify
-    rawFrontSensor->setObstacles(true, false, false);
-    rawLeftSensor->setObstacles(false, false, false);
-    rawRightSensor->setObstacles(false, false, true);
-    subject.notify();
-    EXPECT_EQ(observer.updateCount(), 2);
-    EXPECT_TRUE(observer.lastFront());
-    EXPECT_FALSE(observer.lastLeft());
-    EXPECT_TRUE(observer.lastRight());
-}
+//     // Set obstacle and notify
+//     rawSensor->setObstacles(true, false, true);
+//     subject.notify();
+//     EXPECT_EQ(observer.updateCount(), 2);
+//     EXPECT_TRUE(observer.lastFront());
+//     EXPECT_FALSE(observer.lastLeft());
+//     EXPECT_TRUE(observer.lastRight());
+// }
 
 TEST_F(ObstacleSensorTest, DetachObserver) {
-    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
-                                  std::move(rightSensor)};
+    ObstacleSensorSubject subject{std::move(sensor)};
     MockObserver observer;
     subject.attach(&observer);
     subject.detach(&observer);
@@ -133,8 +123,7 @@ TEST_F(ObstacleSensorTest, DetachObserver) {
 }
 
 TEST_F(ObstacleSensorTest, AttachMultipleObservers) {
-    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
-                                  std::move(rightSensor)};
+    ObstacleSensorSubject subject{std::move(sensor)};
     MockObserver observer1;
 
     class MockObserver2 : public rvc::ISensorObserver {
@@ -173,8 +162,7 @@ TEST_F(ObstacleSensorTest, AttachMultipleObservers) {
 }
 
 TEST_F(ObstacleSensorTest, AttachIgnoresNullptrAndDuplicates) {
-    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
-                                  std::move(rightSensor)};
+    ObstacleSensorSubject subject{std::move(sensor)};
     MockObserver observer;
 
     subject.attach(nullptr);
@@ -187,8 +175,7 @@ TEST_F(ObstacleSensorTest, AttachIgnoresNullptrAndDuplicates) {
 }
 
 TEST_F(ObstacleSensorTest, DetachIgnoresNullptr) {
-    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
-                                  std::move(rightSensor)};
+    ObstacleSensorSubject subject{std::move(sensor)};
     MockObserver observer;
 
     subject.attach(&observer);
@@ -199,8 +186,7 @@ TEST_F(ObstacleSensorTest, DetachIgnoresNullptr) {
 }
 
 TEST_F(ObstacleSensorTest, PollCanBeCalledSafely) {
-    ObstacleSensorSubject subject{std::move(frontSensor), std::move(leftSensor),
-                                  std::move(rightSensor)};
+    ObstacleSensorSubject subject{std::move(sensor)};
     MockObserver observer;
     subject.attach(&observer);
 
@@ -208,4 +194,25 @@ TEST_F(ObstacleSensorTest, PollCanBeCalledSafely) {
 
     // Timer is not expired by default, so poll should not notify yet.
     EXPECT_EQ(observer.updateCount(), 0);
+}
+
+TEST_F(ObstacleSensorTest, PollNotifiesOnlyOnStateChange) {
+    ObstacleSensorSubject subject{std::move(sensor)};
+    MockObserver observer;
+    subject.attach(&observer);
+
+    rawSensor->setObstacles(false, false, false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    subject.poll();
+    EXPECT_EQ(observer.updateCount(), 1);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    subject.poll();
+    EXPECT_EQ(observer.updateCount(), 1);
+
+    rawSensor->setObstacles(true, false, false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    subject.poll();
+    EXPECT_EQ(observer.updateCount(), 2);
+    EXPECT_TRUE(observer.lastFront());
 }
