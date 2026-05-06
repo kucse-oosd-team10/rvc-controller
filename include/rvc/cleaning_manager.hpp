@@ -24,8 +24,8 @@ public:
     void powerUp();
     void handleDustDetected(bool detected);
     void update();
-    PowerLevel getPowerLevel() const;
-    bool isDustDetected() const;
+    [[nodiscard]] PowerLevel getPowerLevel() const;
+    [[nodiscard]] bool isDustDetected() const;
 
 private:
     ICleaner& cleaner_;
