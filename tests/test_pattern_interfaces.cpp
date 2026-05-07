@@ -1,16 +1,79 @@
+#include "rvc/cleaning_manager.hpp"
+#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/i_avoid_strategy.hpp"
+#include "rvc/i_cleaner.hpp"
+#include "rvc/i_dust_sensor.hpp"
+#include "rvc/i_motor.hpp"
+#include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/i_rvc_state.hpp"
 #include "rvc/i_sensor_observer.hpp"
+#include "rvc/movement_manager.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 namespace {
+
+class StubMotor : public rvc::IMotor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    void move(rvc::Direction /*d*/) override {
+    }
+};
+
+class StubCleaner : public rvc::ICleaner {
+public:
+    bool initialize() override {
+        return true;
+    }
+    void setPower(rvc::PowerLevel /*l*/) override {
+    }
+};
+
+class StubObstacleSensor : public rvc::IObstacleSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    bool isFrontDetected() override {
+        return false;
+    }
+    bool isLeftDetected() override {
+        return false;
+    }
+    bool isRightDetected() override {
+        return false;
+    }
+};
+
+class StubDustSensor : public rvc::IDustSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    bool isDustDetected() override {
+        return false;
+    }
+};
+
+class StubAvoidStrategy : public rvc::IAvoidStrategy {
+public:
+    rvc::Direction decideDirection(bool /*f*/, bool /*l*/, bool /*r*/) override {
+        return rvc::Direction::FORWARD;
+    }
+    bool needsReverse(bool /*f*/, bool /*l*/, bool /*r*/) override {
+        return false;
+    }
+};
 
 class TestObserver : public rvc::ISensorObserver {
 public:
@@ -206,8 +269,27 @@ TEST(SensorSubjectTest, SubjectVirtualDestructorViaUniquePtr) {
     EXPECT_NE(base, nullptr);
 }
 
+class IRVCStateTest : public ::testing::Test {
+protected:
+    StubMotor motor;
+    StubCleaner cleaner;
+    StubObstacleSensor obstacleSensor;
+    StubDustSensor dustSensor;
+    StubAvoidStrategy strategy;
+
+    rvc::MovementManager movementMgr{motor, strategy};
+    rvc::CleaningManager cleaningMgr{cleaner, [] {
+                                         return std::int64_t{0};
+                                     }};
+    rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
+    rvc::DustSensorSubject dustSub{dustSensor};
+
+    rvc::RVCController ctx{obstacleSensor, dustSensor, motor, cleaner,
+                           movementMgr,    cleaningMgr, obstacleSub, dustSub};
+};
+
 // TestState 초기 카운터가 모두 0인지 확인
-TEST(IRVCStateTest, FakeStateImplementsAllSlots) {
+TEST_F(IRVCStateTest, FakeStateImplementsAllSlots) {
     TestState state;
     EXPECT_EQ(state.enterCount, 0);
     EXPECT_EQ(state.exitCount, 0);
@@ -217,49 +299,43 @@ TEST(IRVCStateTest, FakeStateImplementsAllSlots) {
 }
 
 // onEnter 호출 시 enterCount가 증가하는지 확인
-TEST(IRVCStateTest, OnEnterIncrementsCounter) {
+TEST_F(IRVCStateTest, OnEnterIncrementsCounter) {
     TestState state;
-    rvc::RVCController ctx;
     state.onEnter(ctx);
     EXPECT_EQ(state.enterCount, 1);
 }
 
 // onExit 호출 시 exitCount가 증가하는지 확인
-TEST(IRVCStateTest, OnExitIncrementsCounter) {
+TEST_F(IRVCStateTest, OnExitIncrementsCounter) {
     TestState state;
-    rvc::RVCController ctx;
     state.onExit(ctx);
     EXPECT_EQ(state.exitCount, 1);
 }
 
 // handleObstacle 호출 시 obstacleCount가 증가하는지 확인
-TEST(IRVCStateTest, HandleObstacleIncrementsCounter) {
+TEST_F(IRVCStateTest, HandleObstacleIncrementsCounter) {
     TestState state;
-    rvc::RVCController ctx;
     state.handleObstacle(ctx, true, false, false);
     EXPECT_EQ(state.obstacleCount, 1);
 }
 
 // handleDust 호출 시 dustCount가 증가하는지 확인
-TEST(IRVCStateTest, HandleDustIncrementsCounter) {
+TEST_F(IRVCStateTest, HandleDustIncrementsCounter) {
     TestState state;
-    rvc::RVCController ctx;
     state.handleDust(ctx, true);
     EXPECT_EQ(state.dustCount, 1);
 }
 
 // handlePowerOff 호출 시 powerOffCount가 증가하는지 확인
-TEST(IRVCStateTest, HandlePowerOffIncrementsCounter) {
+TEST_F(IRVCStateTest, HandlePowerOffIncrementsCounter) {
     TestState state;
-    rvc::RVCController ctx;
     state.handlePowerOff(ctx);
     EXPECT_EQ(state.powerOffCount, 1);
 }
 
 // 각 핸들러를 여러 번 호출 시 카운터가 누적되는지 확인
-TEST(IRVCStateTest, MultipleCallsAccumulateCounts) {
+TEST_F(IRVCStateTest, MultipleCallsAccumulateCounts) {
     TestState state;
-    rvc::RVCController ctx;
     state.onEnter(ctx);
     state.onEnter(ctx);
     state.handleDust(ctx, false);
@@ -268,7 +344,7 @@ TEST(IRVCStateTest, MultipleCallsAccumulateCounts) {
 }
 
 // IRVCState 가상 소멸자가 파생 클래스에서 안전하게 호출되는지 확인
-TEST(IRVCStateTest, VirtualDestructorViaUniquePtr) {
+TEST_F(IRVCStateTest, VirtualDestructorViaUniquePtr) {
     std::unique_ptr<rvc::IRVCState> base = std::make_unique<TestState>();
     EXPECT_NE(base, nullptr);
 }

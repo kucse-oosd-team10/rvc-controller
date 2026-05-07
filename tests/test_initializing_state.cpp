@@ -1,14 +1,21 @@
+#include "rvc/cleaning_manager.hpp"
 #include "rvc/cleaning_state.hpp"
+#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/error_state.hpp"
+#include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_cleaner.hpp"
 #include "rvc/i_dust_sensor.hpp"
 #include "rvc/i_motor.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/initializing_state.hpp"
+#include "rvc/movement_manager.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
 #include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -89,6 +96,16 @@ public:
     bool defaultInitResult{true};
 };
 
+class FakeAvoidStrategy : public rvc::IAvoidStrategy {
+public:
+    rvc::Direction decideDirection(bool /*front*/, bool /*left*/, bool /*right*/) override {
+        return rvc::Direction::FORWARD;
+    }
+    bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override {
+        return false;
+    }
+};
+
 } // namespace
 
 class InitializingStateTest : public ::testing::Test {
@@ -97,13 +114,22 @@ protected:
     FakeDustSensor dustSensor;
     FakeMotor motor;
     FakeCleaner cleaner;
-    rvc::RVCController controller;
+    FakeAvoidStrategy strategy;
+
+    rvc::MovementManager movementMgr{motor, strategy};
+    rvc::CleaningManager cleaningMgr{cleaner, [] {
+                                         return std::int64_t{0};
+                                     }};
+    rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
+    rvc::DustSensorSubject dustSub{dustSensor};
+
+    rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
+                                  movementMgr,    cleaningMgr, obstacleSub, dustSub};
 
     std::unique_ptr<rvc::InitializingState> makeState() {
         return std::make_unique<rvc::InitializingState>(obstacleSensor, dustSensor, motor, cleaner);
     }
 
-    // ErrorState::onEnter가 cout을 출력하므로 ErrorState 전이가 예상되는 테스트에서 억제한다
     static void suppressCout(const std::function<void()>& func) {
         std::ostringstream sink;
         std::streambuf* old = std::cout.rdbuf(sink.rdbuf());
@@ -183,14 +209,12 @@ TEST_F(InitializingStateTest, RetriesExactlyMaxRetryTimes) {
 TEST_F(InitializingStateTest, HandleObstacleIsNoop) {
     auto state = makeState();
     EXPECT_NO_THROW(state->handleObstacle(controller, true, true, true));
-    EXPECT_EQ(controller.getCurrentState(), nullptr);
 }
 
 // handleDust는 no-op이어야 한다
 TEST_F(InitializingStateTest, HandleDustIsNoop) {
     auto state = makeState();
     EXPECT_NO_THROW(state->handleDust(controller, true));
-    EXPECT_EQ(controller.getCurrentState(), nullptr);
 }
 
 // handlePowerOff 호출 시 OffState로 전이되어야 한다

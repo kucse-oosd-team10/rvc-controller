@@ -1,9 +1,76 @@
+#include "rvc/cleaning_manager.hpp"
+#include "rvc/dust_sensor_subject.hpp"
+#include "rvc/i_avoid_strategy.hpp"
+#include "rvc/i_cleaner.hpp"
+#include "rvc/i_dust_sensor.hpp"
+#include "rvc/i_motor.hpp"
+#include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/i_rvc_state.hpp"
+#include "rvc/movement_manager.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
+#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
+#include "rvc/types.hpp"
+
+#include <cstdint>
 
 #include <gtest/gtest.h>
 
 namespace {
+
+class FakeMotor : public rvc::IMotor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    void move(rvc::Direction /*direction*/) override {
+    }
+};
+
+class FakeCleaner : public rvc::ICleaner {
+public:
+    bool initialize() override {
+        return true;
+    }
+    void setPower(rvc::PowerLevel /*level*/) override {
+    }
+};
+
+class FakeObstacleSensor : public rvc::IObstacleSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    bool isFrontDetected() override {
+        return false;
+    }
+    bool isLeftDetected() override {
+        return false;
+    }
+    bool isRightDetected() override {
+        return false;
+    }
+};
+
+class FakeDustSensor : public rvc::IDustSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    bool isDustDetected() override {
+        return false;
+    }
+};
+
+class FakeAvoidStrategy : public rvc::IAvoidStrategy {
+public:
+    rvc::Direction decideDirection(bool /*front*/, bool /*left*/, bool /*right*/) override {
+        return rvc::Direction::FORWARD;
+    }
+    bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override {
+        return false;
+    }
+};
 
 class MockState : public rvc::IRVCState {
 public:
@@ -50,9 +117,27 @@ public:
 
 } // namespace
 
+class RVCControllerTest : public ::testing::Test {
+protected:
+    FakeMotor motor;
+    FakeCleaner cleaner;
+    FakeObstacleSensor obstacleSensor;
+    FakeDustSensor dustSensor;
+    FakeAvoidStrategy strategy;
+
+    rvc::MovementManager movementMgr{motor, strategy};
+    rvc::CleaningManager cleaningMgr{cleaner, [] {
+                                         return std::int64_t{0};
+                                     }};
+    rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
+    rvc::DustSensorSubject dustSub{dustSensor};
+
+    rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
+                                  movementMgr,    cleaningMgr, obstacleSub, dustSub};
+};
+
 // setState 호출 시 이전 상태의 onExit와 새 상태의 onEnter가 호출되는지 확인
-TEST(RVCControllerTest, SetStateCallsEnterAndExit) {
-    rvc::RVCController controller;
+TEST_F(RVCControllerTest, SetStateCallsEnterAndExit) {
     MockState state1;
     MockState state2;
 
@@ -67,8 +152,7 @@ TEST(RVCControllerTest, SetStateCallsEnterAndExit) {
 }
 
 // powerOff 호출 시 현재 상태의 handlePowerOff로 위임되는지 확인
-TEST(RVCControllerTest, PowerOffDelegatesToState) {
-    rvc::RVCController controller;
+TEST_F(RVCControllerTest, PowerOffDelegatesToState) {
     MockState state;
     controller.setState(&state);
 
@@ -78,8 +162,7 @@ TEST(RVCControllerTest, PowerOffDelegatesToState) {
 }
 
 // 장애물 감지 이벤트가 현재 상태의 handleObstacle로 위임되는지 확인
-TEST(RVCControllerTest, ObstacleDetectedDelegatesToState) {
-    rvc::RVCController controller;
+TEST_F(RVCControllerTest, ObstacleDetectedDelegatesToState) {
     MockState state;
     controller.setState(&state);
 
@@ -92,8 +175,7 @@ TEST(RVCControllerTest, ObstacleDetectedDelegatesToState) {
 }
 
 // 먼지 감지 이벤트가 현재 상태의 handleDust로 위임되는지 확인
-TEST(RVCControllerTest, DustDetectedDelegatesToState) {
-    rvc::RVCController controller;
+TEST_F(RVCControllerTest, DustDetectedDelegatesToState) {
     MockState state;
     controller.setState(&state);
 
@@ -103,25 +185,18 @@ TEST(RVCControllerTest, DustDetectedDelegatesToState) {
     EXPECT_TRUE(state.lastDust);
 }
 
-// 초기화 시 각 매니저들이 nullptr로 시작하는지 확인 (현재 구현 기준)
-TEST(RVCControllerTest, ManagersAreNullOnInit) {
-    rvc::RVCController controller;
-    EXPECT_EQ(controller.getMovementManager(), nullptr);
-    EXPECT_EQ(controller.getCleaningManager(), nullptr);
-    EXPECT_EQ(controller.getObstacleSensorSubject(), nullptr);
-    EXPECT_EQ(controller.getDustSensorSubject(), nullptr);
+// 생성 직후 매니저/Subject 가 모두 주입되어 있어야 한다
+TEST_F(RVCControllerTest, ManagersAreInjectedOnConstruction) {
+    EXPECT_EQ(controller.getMovementManager(), &movementMgr);
+    EXPECT_EQ(controller.getCleaningManager(), &cleaningMgr);
+    EXPECT_EQ(controller.getObstacleSensorSubject(), &obstacleSub);
+    EXPECT_EQ(controller.getDustSensorSubject(), &dustSub);
+    EXPECT_EQ(controller.getObstacleSensor(), &obstacleSensor);
 }
 
-// 상태가 없을 때(nullptr) 호출해도 크래시가 나지 않는지 확인
-TEST(RVCControllerTest, NoCrashWhenStateIsNull) {
-    rvc::RVCController controller;
-    EXPECT_NO_THROW(controller.powerOff());
-    EXPECT_NO_THROW(controller.onObstacleDetected(true, true, true));
-    EXPECT_NO_THROW(controller.onDustDetected(true));
-}
-
-// powerOn 호출 확인 (현재 스켈레톤 구현은 아무 동작도 하지 않음)
-TEST(RVCControllerTest, PowerOnDoesNothingInSkeleton) {
-    rvc::RVCController controller;
-    EXPECT_NO_THROW(controller.powerOn());
+// 생성 직후 currentState 는 OffState 로 초기화되어야 한다
+TEST_F(RVCControllerTest, InitialStateIsOff) {
+    auto* current = controller.getCurrentState();
+    ASSERT_NE(current, nullptr);
+    EXPECT_NE(dynamic_cast<rvc::OffState*>(current), nullptr);
 }

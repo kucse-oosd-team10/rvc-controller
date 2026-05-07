@@ -1,16 +1,24 @@
 #include "rvc/rvc_controller.hpp"
 
+#include "rvc/avoiding_state.hpp"
 #include "rvc/i_rvc_state.hpp"
 
 namespace rvc {
 
-RVCController::RVCController() = default;
+RVCController::RVCController(IObstacleSensor& obstacleSensor, IDustSensor& dustSensor,
+                             IMotor& motor, ICleaner& cleaner, MovementManager& movementMgr,
+                             CleaningManager& cleaningMgr, ObstacleSensorSubject& obstacleSub,
+                             DustSensorSubject& dustSub)
+    : obstacleSensor_{&obstacleSensor}, dustSensor_{&dustSensor}, motor_{&motor},
+      cleaner_{&cleaner}, movementMgr_{&movementMgr}, cleaningMgr_{&cleaningMgr},
+      obstacleSub_{&obstacleSub}, dustSub_{&dustSub},
+      initializingState_{obstacleSensor, dustSensor, motor, cleaner}, currentState_{&offState_} {
+}
+
 RVCController::~RVCController() = default;
 
-void RVCController::powerOn() const {
-    // TO BE IMPLEMENTED
-    // Skeleton Code 단계라 구현되지 않았습니다.
-    // 임시로 const로 수정하였습니다.
+void RVCController::powerOn() {
+    // Phase 3 후속 커밋에서 본문 채움.
 }
 
 void RVCController::powerOff() {
@@ -45,6 +53,27 @@ IRVCState* RVCController::getCurrentState() const {
     return currentState_;
 }
 
+void RVCController::enterOff() {
+    setState(&offState_);
+}
+
+void RVCController::enterInitializing() {
+    setState(&initializingState_);
+}
+
+void RVCController::enterCleaning() {
+    setState(&cleaningState_);
+}
+
+void RVCController::enterError() {
+    setState(&errorState_);
+}
+
+void RVCController::enterAvoiding(bool front, bool left, bool right) {
+    currentAvoiding_ = std::make_unique<AvoidingState>(front, left, right);
+    setState(currentAvoiding_.get());
+}
+
 MovementManager* RVCController::getMovementManager() {
     return movementMgr_;
 }
@@ -63,18 +92,6 @@ DustSensorSubject* RVCController::getDustSensorSubject() {
 
 IObstacleSensor* RVCController::getObstacleSensor() {
     return obstacleSensor_;
-}
-
-void RVCController::setMovementManager(MovementManager* manager) {
-    movementMgr_ = manager;
-}
-
-void RVCController::setCleaningManager(CleaningManager* manager) {
-    cleaningMgr_ = manager;
-}
-
-void RVCController::setObstacleSensor(IObstacleSensor* sensor) {
-    obstacleSensor_ = sensor;
 }
 
 } // namespace rvc

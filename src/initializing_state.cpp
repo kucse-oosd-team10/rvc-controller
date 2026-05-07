@@ -1,12 +1,9 @@
 #include "rvc/initializing_state.hpp"
 
-#include "rvc/cleaning_state.hpp"
-#include "rvc/error_state.hpp"
 #include "rvc/i_cleaner.hpp"
 #include "rvc/i_dust_sensor.hpp"
 #include "rvc/i_motor.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
-#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 
 namespace rvc {
@@ -26,14 +23,12 @@ void InitializingState::onEnter(RVCController& ctx) {
         const bool cleanerInitialized = cleaner_.initialize();
 
         if (obstacleInitialized && dustInitialized && motorInitialized && cleanerInitialized) {
-            // TODO: owning 슬롯으로 교체
-            ctx.setState(new CleaningState());
+            ctx.enterCleaning();
             return;
         }
         ++retryCount_;
     }
-    // TODO: owning 슬롯으로 교체
-    ctx.setState(new ErrorState());
+    ctx.enterError();
 }
 
 void InitializingState::onExit(RVCController& /*ctx*/) {
@@ -47,8 +42,7 @@ void InitializingState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {
 }
 
 void InitializingState::handlePowerOff(RVCController& ctx) {
-    static OffState offState;
-    ctx.setState(&offState);
+    ctx.enterOff();
 }
 
 } // namespace rvc

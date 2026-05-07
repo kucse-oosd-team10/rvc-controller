@@ -1,13 +1,18 @@
 #include "rvc/cleaning_manager.hpp"
+#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/error_state.hpp"
 #include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_cleaner.hpp"
+#include "rvc/i_dust_sensor.hpp"
 #include "rvc/i_motor.hpp"
+#include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/movement_manager.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
 #include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
+#include <cstdint>
 #include <sstream>
 #include <vector>
 
@@ -41,6 +46,32 @@ public:
     std::vector<rvc::PowerLevel> powers;
 };
 
+class FakeObstacleSensor : public rvc::IObstacleSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    bool isFrontDetected() override {
+        return false;
+    }
+    bool isLeftDetected() override {
+        return false;
+    }
+    bool isRightDetected() override {
+        return false;
+    }
+};
+
+class FakeDustSensor : public rvc::IDustSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+    bool isDustDetected() override {
+        return false;
+    }
+};
+
 class FakeAvoidStrategy : public rvc::IAvoidStrategy {
 public:
     rvc::Direction decideDirection(bool /*front*/, bool /*left*/, bool /*right*/) override {
@@ -52,31 +83,26 @@ public:
     }
 };
 
-class FakeClock {
-public:
-    static std::int64_t now() {
-        return 0;
-    }
-};
-
 } // namespace
 
 class ErrorStateTest : public ::testing::Test {
 protected:
     FakeMotor motor;
     FakeCleaner cleaner;
+    FakeObstacleSensor obstacleSensor;
+    FakeDustSensor dustSensor;
     FakeAvoidStrategy strategy;
+
     rvc::MovementManager movementMgr{motor, strategy};
     rvc::CleaningManager cleaningMgr{cleaner, [] {
-                                         return FakeClock::now();
+                                         return std::int64_t{0};
                                      }};
-    rvc::RVCController controller;
-    rvc::ErrorState state;
+    rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
+    rvc::DustSensorSubject dustSub{dustSensor};
 
-    ErrorStateTest() {
-        controller.setMovementManager(&movementMgr);
-        controller.setCleaningManager(&cleaningMgr);
-    }
+    rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
+                                  movementMgr,    cleaningMgr, obstacleSub, dustSub};
+    rvc::ErrorState state;
 };
 
 // onEnter 호출 시 에러 메시지가 출력되어야 한다
@@ -115,15 +141,6 @@ TEST_F(ErrorStateTest, OnEnterStopsCleaning) {
 
     ASSERT_FALSE(cleaner.powers.empty());
     EXPECT_EQ(cleaner.powers.back(), rvc::PowerLevel::OFF);
-}
-
-// 매니저가 nullptr일 때도 onEnter가 크래시 없이 동작해야 한다
-TEST_F(ErrorStateTest, OnEnterIsRobustToNullManagers) {
-    rvc::RVCController empty;
-    std::ostringstream sink;
-    std::streambuf* old = std::cout.rdbuf(sink.rdbuf());
-    EXPECT_NO_THROW(state.onEnter(empty));
-    std::cout.rdbuf(old);
 }
 
 // handleObstacle은 no-op이어야 한다
