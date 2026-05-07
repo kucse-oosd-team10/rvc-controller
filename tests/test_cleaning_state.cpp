@@ -4,7 +4,6 @@
 #include "rvc/i_cleaner.hpp"
 #include "rvc/i_motor.hpp"
 #include "rvc/movement_manager.hpp"
-#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
@@ -61,6 +60,18 @@ public:
     std::int64_t currentTime_{0};
 };
 
+class SpyCleaningState : public rvc::CleaningState {
+public:
+    void onExit(rvc::RVCController& ctx) override {
+        rvc::CleaningState::onExit(ctx);
+        onExitCalled = true;
+    }
+
+    bool onExitCalled{false};
+};
+
+} // namespace
+
 class CleaningStateTest : public ::testing::Test {
 protected:
     FakeMotor motor;
@@ -76,7 +87,7 @@ protected:
     rvc::RVCController controller;
     rvc::CleaningState state;
 
-    void SetUp() override {
+    CleaningStateTest() {
         controller.setMovementManager(&movementMgr);
         controller.setCleaningManager(&cleaningMgr);
     }
@@ -156,16 +167,6 @@ TEST_F(CleaningStateTest, HandleObstacleOrdersStopBeforeStateTransition) {
 
 // handleObstacle 호출 시 현재 state 의 onExit 이 트리거되어 상태 전환이 일어나야 한다.
 TEST_F(CleaningStateTest, HandleObstacleTriggersStateTransition) {
-    class SpyCleaningState : public rvc::CleaningState {
-    public:
-        void onExit(rvc::RVCController& ctx) override {
-            rvc::CleaningState::onExit(ctx);
-            onExitCalled = true;
-        }
-
-        bool onExitCalled{false};
-    };
-
     SpyCleaningState spy;
     controller.setState(&spy);
 
@@ -202,16 +203,6 @@ TEST_F(CleaningStateTest, HandleDustFalseUpdatesCache) {
 
 // handleDust 호출이 상태 전환을 발생시키지 않아야 한다.
 TEST_F(CleaningStateTest, HandleDustDoesNotTransitionState) {
-    class SpyCleaningState : public rvc::CleaningState {
-    public:
-        void onExit(rvc::RVCController& ctx) override {
-            rvc::CleaningState::onExit(ctx);
-            onExitCalled = true;
-        }
-
-        bool onExitCalled{false};
-    };
-
     SpyCleaningState spy;
     controller.setState(&spy);
 
@@ -252,12 +243,7 @@ TEST_F(CleaningStateTest, HandlePowerOffStopsMotor) {
 
 // handlePowerOff 호출 후 controller 의 현재 state 가 OffState 로 전환되어야 한다.
 TEST_F(CleaningStateTest, HandlePowerOffTransitionsToOffState) {
-    class ProbeState : public rvc::CleaningState {
-    public:
-        rvc::IRVCState* lastNextState{nullptr};
-    };
-
-    ProbeState spy;
+    SpyCleaningState spy;
     controller.setState(&spy);
 
     spy.handlePowerOff(controller);
@@ -273,16 +259,6 @@ TEST_F(CleaningStateTest, HandlePowerOffTransitionsToOffState) {
 
 // handlePowerOff 호출 시 현재 state 의 onExit 이 트리거되어 상태 전환이 일어나야 한다.
 TEST_F(CleaningStateTest, HandlePowerOffTriggersStateTransition) {
-    class SpyCleaningState : public rvc::CleaningState {
-    public:
-        void onExit(rvc::RVCController& ctx) override {
-            rvc::CleaningState::onExit(ctx);
-            onExitCalled = true;
-        }
-
-        bool onExitCalled{false};
-    };
-
     SpyCleaningState spy;
     controller.setState(&spy);
 
@@ -309,5 +285,3 @@ TEST_F(CleaningStateTest, EndToEndScenarioBeforeAvoidance) {
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::OFF);
     EXPECT_EQ(motor.moves.back(), rvc::Direction::STOP);
 }
-
-} // namespace
