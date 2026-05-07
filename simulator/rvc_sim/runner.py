@@ -1,12 +1,22 @@
 """Headless 시뮬레이션 러너 + Snapshot + FakeClock."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, List, Optional, Protocol
+from dataclasses import dataclass
+from typing import List, Optional, Protocol
 
 from .adapters import SimCleaner, SimDustSensor, SimMotor, SimObstacleSensor
 from .robot import Robot
-from .rvc import Direction, PowerLevel, RVCController, backend
+from .rvc import (
+    CleaningManager,
+    DefaultAvoidStrategy,
+    Direction,
+    DustSensorSubject,
+    MovementManager,
+    ObstacleSensorSubject,
+    PowerLevel,
+    RVCController,
+    current_state_name,
+)
 from .scenario import CleaningRates, Scenario
 from .types import Heading
 from .world import World
@@ -114,11 +124,20 @@ class SimulationRunner:
         self._initial_dust = self.world.total_dust()
 
     def _build_controller(self) -> RVCController:
-        kwargs: dict = {}
-        if backend() == "mock":
-            kwargs["clock"] = self.clock
+        self.strategy = DefaultAvoidStrategy()
+        self.movement_mgr = MovementManager(self.motor, self.strategy)
+        self.cleaning_mgr = CleaningManager(self.cleaner, self.clock)
+        self.obs_sub = ObstacleSensorSubject(self.obs_sensor)
+        self.dust_sub = DustSensorSubject(self.dust_sensor)
         return RVCController(
-            self.motor, self.cleaner, self.obs_sensor, self.dust_sensor, **kwargs
+            self.obs_sensor,
+            self.dust_sensor,
+            self.motor,
+            self.cleaner,
+            self.movement_mgr,
+            self.cleaning_mgr,
+            self.obs_sub,
+            self.dust_sub,
         )
 
     def _snapshot(self) -> Snapshot:
@@ -129,7 +148,7 @@ class SimulationRunner:
             robot_x=self.robot.x,
             robot_y=self.robot.y,
             robot_heading=self.robot.heading.name,
-            state_name=self.controller.current_state_name,
+            state_name=current_state_name(self.controller),
             cleaner_power=self.cleaner.current_power,
             motor_history_len=len(self.motor.history),
             last_motor_command=last_cmd,
@@ -182,6 +201,6 @@ class SimulationRunner:
             collisions=list(self.world.collisions),
             initial_dust=self._initial_dust,
             final_dust=self.world.total_dust(),
-            state_after_power_off=self.controller.current_state_name,
+            state_after_power_off=current_state_name(self.controller),
             power_off_invoked=power_off_invoked,
         )
