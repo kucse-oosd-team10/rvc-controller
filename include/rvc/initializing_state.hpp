@@ -24,4 +24,4 @@ private:
     int retryCount_{0};
     const int MAX_RETRIES_{3};
 };
-}
+} // namespace rvc
