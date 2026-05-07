@@ -8,6 +8,7 @@
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
+#include <memory>
 #include <sstream>
 #include <vector>
 
@@ -97,6 +98,10 @@ protected:
     FakeCleaner cleaner;
     rvc::RVCController controller;
 
+    std::unique_ptr<rvc::InitializingState> makeState() {
+        return std::make_unique<rvc::InitializingState>(obstacleSensor, dustSensor, motor, cleaner);
+    }
+
     // ErrorState::onEnter가 cout을 출력하므로 ErrorState 전이가 예상되는 테스트에서 억제한다
     static void suppressCout(const std::function<void()>& func) {
         std::ostringstream sink;
@@ -108,8 +113,8 @@ protected:
 
 // 4개 디바이스 모두 초기화 성공 → CleaningState로 전이
 TEST_F(InitializingStateTest, AllDevicesSucceedTransitionsToCleaningState) {
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    state.onEnter(controller);
+    auto state = makeState();
+    state->onEnter(controller);
 
     ASSERT_NE(controller.getCurrentState(), nullptr);
     EXPECT_NE(dynamic_cast<rvc::CleaningState*>(controller.getCurrentState()), nullptr);
@@ -117,8 +122,8 @@ TEST_F(InitializingStateTest, AllDevicesSucceedTransitionsToCleaningState) {
 
 // 성공 시 각 디바이스의 initialize()가 정확히 1회씩 호출된다
 TEST_F(InitializingStateTest, AllDevicesInitializedOnceOnSuccess) {
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    state.onEnter(controller);
+    auto state = makeState();
+    state->onEnter(controller);
 
     EXPECT_EQ(obstacleSensor.initCallCount, 1);
     EXPECT_EQ(dustSensor.initCallCount, 1);
@@ -129,9 +134,8 @@ TEST_F(InitializingStateTest, AllDevicesInitializedOnceOnSuccess) {
 // 1회 실패 후 2회차 성공 → CleaningState로 전이
 TEST_F(InitializingStateTest, FirstAttemptFailsThenSucceedsTransitionsToCleaningState) {
     obstacleSensor.initResults = {false, true};
-
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    state.onEnter(controller);
+    auto state = makeState();
+    state->onEnter(controller);
 
     ASSERT_NE(controller.getCurrentState(), nullptr);
     EXPECT_NE(dynamic_cast<rvc::CleaningState*>(controller.getCurrentState()), nullptr);
@@ -141,9 +145,8 @@ TEST_F(InitializingStateTest, FirstAttemptFailsThenSucceedsTransitionsToCleaning
 // 2회 실패 후 3회차 성공 → CleaningState로 전이
 TEST_F(InitializingStateTest, TwoFailuresThenSuccessTransitionsToCleaningState) {
     obstacleSensor.initResults = {false, false, true};
-
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    state.onEnter(controller);
+    auto state = makeState();
+    state->onEnter(controller);
 
     ASSERT_NE(controller.getCurrentState(), nullptr);
     EXPECT_NE(dynamic_cast<rvc::CleaningState*>(controller.getCurrentState()), nullptr);
@@ -155,8 +158,8 @@ TEST_F(InitializingStateTest, AllAttemptsFailTransitionsToErrorState) {
     obstacleSensor.defaultInitResult = false;
 
     suppressCout([&] {
-        rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-        state.onEnter(controller);
+        auto state = makeState();
+        state->onEnter(controller);
     });
 
     ASSERT_NE(controller.getCurrentState(), nullptr);
@@ -168,8 +171,8 @@ TEST_F(InitializingStateTest, RetriesExactlyMaxRetryTimes) {
     obstacleSensor.defaultInitResult = false;
 
     suppressCout([&] {
-        rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-        state.onEnter(controller);
+        auto state = makeState();
+        state->onEnter(controller);
     });
 
     EXPECT_EQ(obstacleSensor.initCallCount, 3);
@@ -177,27 +180,27 @@ TEST_F(InitializingStateTest, RetriesExactlyMaxRetryTimes) {
 
 // handleObstacle은 no-op이어야 한다
 TEST_F(InitializingStateTest, HandleObstacleIsNoop) {
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    EXPECT_NO_THROW(state.handleObstacle(controller, true, true, true));
+    auto state = makeState();
+    EXPECT_NO_THROW(state->handleObstacle(controller, true, true, true));
     EXPECT_EQ(controller.getCurrentState(), nullptr);
 }
 
 // handleDust는 no-op이어야 한다
 TEST_F(InitializingStateTest, HandleDustIsNoop) {
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    EXPECT_NO_THROW(state.handleDust(controller, true));
+    auto state = makeState();
+    EXPECT_NO_THROW(state->handleDust(controller, true));
     EXPECT_EQ(controller.getCurrentState(), nullptr);
 }
 
 // handlePowerOff는 no-op이어야 한다
 TEST_F(InitializingStateTest, HandlePowerOffIsNoop) {
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    EXPECT_NO_THROW(state.handlePowerOff(controller));
+    auto state = makeState();
+    EXPECT_NO_THROW(state->handlePowerOff(controller));
     EXPECT_EQ(controller.getCurrentState(), nullptr);
 }
 
 // onExit는 no-op이어야 한다
 TEST_F(InitializingStateTest, OnExitIsNoop) {
-    rvc::InitializingState state{obstacleSensor, dustSensor, motor, cleaner};
-    EXPECT_NO_THROW(state.onExit(controller));
+    auto state = makeState();
+    EXPECT_NO_THROW(state->onExit(controller));
 }

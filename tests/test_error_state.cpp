@@ -65,7 +65,6 @@ protected:
     FakeMotor motor;
     FakeCleaner cleaner;
     FakeAvoidStrategy strategy;
-    FakeClock clock;
     rvc::MovementManager movementMgr{motor, strategy};
     rvc::CleaningManager cleaningMgr{cleaner, [] {
                                          return FakeClock::now();
