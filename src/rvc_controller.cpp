@@ -41,6 +41,10 @@ void RVCController::setState(IRVCState* state) {
     }
 }
 
+IRVCState* RVCController::getCurrentState() const {
+    return currentState_;
+}
+
 MovementManager* RVCController::getMovementManager() {
     return movementMgr_;
 }
@@ -55,6 +59,22 @@ ObstacleSensorSubject* RVCController::getObstacleSensorSubject() {
 
 DustSensorSubject* RVCController::getDustSensorSubject() {
     return dustSub_;
+}
+
+IObstacleSensor* RVCController::getObstacleSensor() {
+    return obstacleSensor_;
+}
+
+void RVCController::setMovementManager(MovementManager* manager) {
+    movementMgr_ = manager;
+}
+
+void RVCController::setCleaningManager(CleaningManager* manager) {
+    cleaningMgr_ = manager;
+}
+
+void RVCController::setObstacleSensor(IObstacleSensor* sensor) {
+    obstacleSensor_ = sensor;
 }
 
 } // namespace rvc
