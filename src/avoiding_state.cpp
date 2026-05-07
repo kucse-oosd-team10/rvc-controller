@@ -1,6 +1,7 @@
 #include "rvc/avoiding_state.hpp"
 
 #include "rvc/cleaning_manager.hpp"
+#include "rvc/cleaning_state.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/movement_manager.hpp"
 #include "rvc/off_state.hpp"
@@ -41,8 +42,8 @@ void AvoidingState::onEnter(RVCController& ctx) {
 
     mm->executeAvoidance(front, left, right);
 
-    // CleaningState 머지 후 setState(&cleaningState) 로 교체
-    ctx.setState(nullptr);
+    // TODO(Phase 3): RVCController owning 슬롯 사용으로 교체. 현재는 develop 의 임시 패턴 따름.
+    ctx.setState(new CleaningState());
 }
 
 void AvoidingState::onExit(RVCController& /*ctx*/) {

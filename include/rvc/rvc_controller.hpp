@@ -38,7 +38,8 @@ public:
     // AvoidingState 의 라이브 IObstacleSensor 조회 경로
     IObstacleSensor* getObstacleSensor();
 
-    // 생성자 주입(또는 attach API)으로 교체
+    // TODO: 아래 nullable setter 3종은 Phase 1~2 의 임시 주입 API.
+    // RVCController 생성자 주입으로 교체 후 제거 예정.
     void setMovementManager(MovementManager* manager);
     void setCleaningManager(CleaningManager* manager);
     void setObstacleSensor(IObstacleSensor* sensor);

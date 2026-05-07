@@ -1,5 +1,6 @@
 #include "rvc/avoiding_state.hpp"
 #include "rvc/cleaning_manager.hpp"
+#include "rvc/cleaning_state.hpp"
 #include "rvc/default_avoid_strategy.hpp"
 #include "rvc/i_cleaner.hpp"
 #include "rvc/i_motor.hpp"
@@ -133,12 +134,13 @@ protected:
 };
 
 // 전방만 막혔을 때 후진 없이 곧바로 좌측 회피로 turn 호출이 일어난다
+// (CleaningState 인계 시 뒤이어 FORWARD 가 push 되므로 motor.last 가 아닌 contains 로 검증)
 TEST_F(AvoidingStateTest, OnEnterFrontOnlyTurnsLeftWithoutReversing) {
     rvc::AvoidingState state{true, false, false};
     state.onEnter(controller);
 
     EXPECT_FALSE(containsDirection(motor.directions, rvc::Direction::BACKWARD));
-    EXPECT_EQ(motor.last, rvc::Direction::LEFT);
+    EXPECT_TRUE(containsDirection(motor.directions, rvc::Direction::LEFT));
 }
 
 // 전방+좌측이 막혔을 때 후진 없이 우측으로 회피한다
@@ -147,7 +149,7 @@ TEST_F(AvoidingStateTest, OnEnterFrontLeftBlockedTurnsRight) {
     state.onEnter(controller);
 
     EXPECT_FALSE(containsDirection(motor.directions, rvc::Direction::BACKWARD));
-    EXPECT_EQ(motor.last, rvc::Direction::RIGHT);
+    EXPECT_TRUE(containsDirection(motor.directions, rvc::Direction::RIGHT));
 }
 
 // 사방이 막힌 상황에서 한쪽이 풀릴 때까지 후진 후 회피 방향을 결정한다
@@ -182,12 +184,15 @@ TEST_F(AvoidingStateTest, OnEnterAllBlockedExitsAfterSingleReverseWhenLeftClears
     EXPECT_EQ(sensor.right_reads, 2);
 }
 
-// onEnter 종료 시 setState 호출로 현재 상태가 nullptr 로 바뀐다 (CleaningState 자리)
-TEST_F(AvoidingStateTest, OnEnterTransitionsToNextStateAfterAvoidance) {
+// onEnter 회피 완료 후 currentState_ 가 CleaningState 인스턴스로 전환되어야 한다.
+// (placeholder nullptr 전환을 계약으로 굳히지 않도록 실제 다음 State 타입을 검증)
+TEST_F(AvoidingStateTest, OnEnterTransitionsToCleaningStateAfterAvoidance) {
     rvc::AvoidingState state{true, false, false};
     controller.setState(&state);
 
-    EXPECT_EQ(controller.getCurrentState(), nullptr);
+    auto* current = controller.getCurrentState();
+    ASSERT_NE(current, nullptr);
+    EXPECT_NE(dynamic_cast<rvc::CleaningState*>(current), nullptr);
 }
 
 // MovementManager 가 주입되지 않았으면 onEnter 는 조기 반환하고 모터/센서 호출이 없다
