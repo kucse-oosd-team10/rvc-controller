@@ -50,12 +50,15 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isFrontDetected() override {
         return false;
     }
+
     bool isLeftDetected() override {
         return false;
     }
+
     bool isRightDetected() override {
         return false;
     }
@@ -66,6 +69,7 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isDustDetected() override {
         return false;
     }
@@ -141,7 +145,7 @@ protected:
     rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
     rvc::DustSensorSubject dustSub{dustSensor};
 
-    rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
+    rvc::RVCController controller{obstacleSensor, dustSensor,  motor,       cleaner,
                                   movementMgr,    cleaningMgr, obstacleSub, dustSub};
     rvc::CleaningState state;
 };
@@ -197,7 +201,8 @@ TEST_F(CleaningStateTest, HandleObstacleStopsMotor) {
     EXPECT_EQ(motor.moves.front(), rvc::Direction::STOP);
 }
 
-// handleObstacle 호출 시 청소 OFF → 모터 STOP → AvoidingState 전환 순서로 부수효과가 누적되어야 한다.
+// handleObstacle 호출 시 청소 OFF → 모터 STOP → AvoidingState 전환 순서로 부수효과가 누적되어야
+// 한다.
 TEST_F(CleaningStateTest, HandleObstacleOrdersStopBeforeStateTransition) {
     controller.setState(&state);
     motor.moves.clear();

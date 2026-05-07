@@ -104,6 +104,7 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isDustDetected() override {
         return false;
     }
@@ -136,8 +137,7 @@ protected:
     rvc::ObstacleSensorSubject obstacleSub{sensor};
     rvc::DustSensorSubject dustSub{dustSensor};
 
-    rvc::RVCController controller{sensor, dustSensor, motor, cleaner,
-                                  mm,     cm,         obstacleSub, dustSub};
+    rvc::RVCController controller{sensor, dustSensor, motor, cleaner, mm, cm, obstacleSub, dustSub};
 
     static bool containsDirection(const std::vector<rvc::Direction>& dirs, rvc::Direction target) {
         return std::find(dirs.begin(), dirs.end(), target) != dirs.end();

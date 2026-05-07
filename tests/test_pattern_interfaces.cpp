@@ -26,6 +26,7 @@ public:
     bool initialize() override {
         return true;
     }
+
     void move(rvc::Direction /*d*/) override {
     }
 };
@@ -35,6 +36,7 @@ public:
     bool initialize() override {
         return true;
     }
+
     void setPower(rvc::PowerLevel /*l*/) override {
     }
 };
@@ -44,12 +46,15 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isFrontDetected() override {
         return false;
     }
+
     bool isLeftDetected() override {
         return false;
     }
+
     bool isRightDetected() override {
         return false;
     }
@@ -60,6 +65,7 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isDustDetected() override {
         return false;
     }
@@ -70,6 +76,7 @@ public:
     rvc::Direction decideDirection(bool /*f*/, bool /*l*/, bool /*r*/) override {
         return rvc::Direction::FORWARD;
     }
+
     bool needsReverse(bool /*f*/, bool /*l*/, bool /*r*/) override {
         return false;
     }
@@ -284,7 +291,7 @@ protected:
     rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
     rvc::DustSensorSubject dustSub{dustSensor};
 
-    rvc::RVCController ctx{obstacleSensor, dustSensor, motor, cleaner,
+    rvc::RVCController ctx{obstacleSensor, dustSensor,  motor,       cleaner,
                            movementMgr,    cleaningMgr, obstacleSub, dustSub};
 };
 

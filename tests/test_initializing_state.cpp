@@ -101,6 +101,7 @@ public:
     rvc::Direction decideDirection(bool /*front*/, bool /*left*/, bool /*right*/) override {
         return rvc::Direction::FORWARD;
     }
+
     bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override {
         return false;
     }
@@ -123,7 +124,7 @@ protected:
     rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
     rvc::DustSensorSubject dustSub{dustSensor};
 
-    rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
+    rvc::RVCController controller{obstacleSensor, dustSensor,  motor,       cleaner,
                                   movementMgr,    cleaningMgr, obstacleSub, dustSub};
 
     std::unique_ptr<rvc::InitializingState> makeState() {

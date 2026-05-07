@@ -51,12 +51,15 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isFrontDetected() override {
         return false;
     }
+
     bool isLeftDetected() override {
         return false;
     }
+
     bool isRightDetected() override {
         return false;
     }
@@ -67,6 +70,7 @@ public:
     bool initialize() override {
         return true;
     }
+
     bool isDustDetected() override {
         return false;
     }
@@ -100,7 +104,7 @@ protected:
     rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
     rvc::DustSensorSubject dustSub{dustSensor};
 
-    rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
+    rvc::RVCController controller{obstacleSensor, dustSensor,  motor,       cleaner,
                                   movementMgr,    cleaningMgr, obstacleSub, dustSub};
     rvc::ErrorState state;
 };
