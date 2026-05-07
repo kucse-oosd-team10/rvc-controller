@@ -92,7 +92,7 @@ def _final_state(spec, result):
 
 @register("motor_history_contains")
 def _motor_contains(spec, result):
-    direction = Direction[spec["direction"]]
+    direction = Direction.__members__[spec["direction"]]
     if direction not in result.motor_history:
         raise AssertionFailure(
             _msg(spec, f"motor history missing {direction.name}; got {[d.name for d in result.motor_history]}")
@@ -101,7 +101,7 @@ def _motor_contains(spec, result):
 
 @register("motor_history_sequence")
 def _motor_sequence(spec, result):
-    seq = [Direction[s] for s in spec["sequence"]]
+    seq = [Direction.__members__[s] for s in spec["sequence"]]
     history = result.motor_history
     n = len(seq)
     for i in range(len(history) - n + 1):
@@ -116,7 +116,7 @@ def _motor_sequence(spec, result):
 @register("cleaner_power_at_tick")
 def _cleaner_power_at_tick(spec, result):
     snap = _snapshot_at(result, int(spec["tick"]))
-    expected = PowerLevel[spec["expected"]]
+    expected = PowerLevel.__members__[spec["expected"]]
     if snap.cleaner_power != expected:
         raise AssertionFailure(
             _msg(spec, f"cleaner power at tick {snap.tick} = {snap.cleaner_power.name}, "
@@ -126,7 +126,7 @@ def _cleaner_power_at_tick(spec, result):
 
 @register("cleaner_history_contains")
 def _cleaner_history_contains(spec, result):
-    power = PowerLevel[spec["power"]]
+    power = PowerLevel.__members__[spec["power"]]
     if power not in result.cleaner_history:
         raise AssertionFailure(
             _msg(spec, f"cleaner history missing {power.name}; got "
