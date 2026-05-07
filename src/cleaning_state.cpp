@@ -1,5 +1,6 @@
 #include "rvc/cleaning_state.hpp"
 
+#include "rvc/avoiding_state.hpp"
 #include "rvc/cleaning_manager.hpp"
 #include "rvc/movement_manager.hpp"
 #include "rvc/off_state.hpp"
@@ -22,8 +23,7 @@ void CleaningState::onEnter(RVCController& ctx) {
 void CleaningState::onExit(RVCController& /*ctx*/) {
 }
 
-void CleaningState::handleObstacle(RVCController& ctx, bool /*front*/, bool /*left*/,
-                                   bool /*right*/) {
+void CleaningState::handleObstacle(RVCController& ctx, bool front, bool left, bool right) {
     CleaningManager* cleaningMgr = ctx.getCleaningManager();
     if (cleaningMgr != nullptr) {
         cleaningMgr->stopCleaning();
@@ -34,8 +34,8 @@ void CleaningState::handleObstacle(RVCController& ctx, bool /*front*/, bool /*le
         movementMgr->stop();
     }
 
-    // AvoidingState merge 시 setState(new AvoidingState(front, left, right)) 등으로 교체.
-    ctx.setState(nullptr);
+    // TODO(Phase 3): RVCController owning 슬롯 사용으로 교체. 현재는 develop 의 임시 패턴 따름.
+    ctx.setState(new AvoidingState(front, left, right));
 }
 
 void CleaningState::handleDust(RVCController& ctx, bool detected) {
