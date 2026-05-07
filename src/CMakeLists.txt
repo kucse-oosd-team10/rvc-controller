@@ -18,6 +18,8 @@ target_include_directories(rvc_lib
     PUBLIC ${PROJECT_SOURCE_DIR}/include
 )
 
+set_target_properties(rvc_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # Executable
 add_executable(rvc_main main.cpp)
 target_link_libraries(rvc_main PRIVATE rvc_lib)
