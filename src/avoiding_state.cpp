@@ -1,10 +1,8 @@
 #include "rvc/avoiding_state.hpp"
 
 #include "rvc/cleaning_manager.hpp"
-#include "rvc/cleaning_state.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/movement_manager.hpp"
-#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 
 namespace rvc {
@@ -34,7 +32,6 @@ void AvoidingState::onEnter(RVCController& ctx) {
             right = sensor->isRightDetected();
         } while (left && right);
 
-        // 후진 완료 후 모든 센서 재확인
         front = sensor->isFrontDetected();
         left = sensor->isLeftDetected();
         right = sensor->isRightDetected();
@@ -42,8 +39,7 @@ void AvoidingState::onEnter(RVCController& ctx) {
 
     mm->executeAvoidance(front, left, right);
 
-    // TODO(Phase 3): RVCController owning 슬롯 사용으로 교체. 현재는 develop 의 임시 패턴 따름.
-    ctx.setState(new CleaningState());
+    ctx.enterCleaning();
 }
 
 void AvoidingState::onExit(RVCController& /*ctx*/) {
@@ -51,7 +47,6 @@ void AvoidingState::onExit(RVCController& /*ctx*/) {
 
 void AvoidingState::handleObstacle(RVCController& /*ctx*/, bool /*front*/, bool /*left*/,
                                    bool /*right*/) {
-    // 회피 동작 우선 — 새 obstacle 이벤트 무시
 }
 
 void AvoidingState::handleDust(RVCController& ctx, bool detected) {
@@ -72,8 +67,7 @@ void AvoidingState::handlePowerOff(RVCController& ctx) {
         cm->stopCleaning();
     }
 
-    static OffState offState;
-    ctx.setState(&offState);
+    ctx.enterOff();
 }
 
 } // namespace rvc

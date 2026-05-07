@@ -1,10 +1,13 @@
-#include "rvc/avoiding_state.hpp"
 #include "rvc/cleaning_manager.hpp"
 #include "rvc/cleaning_state.hpp"
+#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_cleaner.hpp"
+#include "rvc/i_dust_sensor.hpp"
 #include "rvc/i_motor.hpp"
+#include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/movement_manager.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
@@ -42,6 +45,36 @@ public:
     std::vector<rvc::PowerLevel> powers;
 };
 
+class FakeObstacleSensor : public rvc::IObstacleSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+
+    bool isFrontDetected() override {
+        return false;
+    }
+
+    bool isLeftDetected() override {
+        return false;
+    }
+
+    bool isRightDetected() override {
+        return false;
+    }
+};
+
+class FakeDustSensor : public rvc::IDustSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+
+    bool isDustDetected() override {
+        return false;
+    }
+};
+
 class FakeAvoidStrategy : public rvc::IAvoidStrategy {
 public:
     rvc::Direction decideDirection(bool front, bool left, bool right) override {
@@ -77,7 +110,7 @@ bool containsDirection(const std::vector<rvc::Direction>& moves, rvc::Direction 
 
 class FakeClock {
 public:
-    std::int64_t now() const {
+    [[nodiscard]] std::int64_t now() const {
         return currentTime_;
     }
 
@@ -100,6 +133,8 @@ class CleaningStateTest : public ::testing::Test {
 protected:
     FakeMotor motor;
     FakeCleaner cleaner;
+    FakeObstacleSensor obstacleSensor;
+    FakeDustSensor dustSensor;
     FakeAvoidStrategy strategy;
     FakeClock clock;
 
@@ -107,14 +142,12 @@ protected:
     rvc::CleaningManager cleaningMgr{cleaner, [this] {
                                          return clock.now();
                                      }};
+    rvc::ObstacleSensorSubject obstacleSub{obstacleSensor};
+    rvc::DustSensorSubject dustSub{dustSensor};
 
-    rvc::RVCController controller;
+    rvc::RVCController controller{obstacleSensor, dustSensor,  motor,       cleaner,
+                                  movementMgr,    cleaningMgr, obstacleSub, dustSub};
     rvc::CleaningState state;
-
-    CleaningStateTest() {
-        controller.setMovementManager(&movementMgr);
-        controller.setCleaningManager(&cleaningMgr);
-    }
 };
 
 // onEnter 호출 시 모터가 전진 명령을 받아야 한다.
@@ -134,12 +167,6 @@ TEST_F(CleaningStateTest, OnEnterStartsCleaning) {
     EXPECT_EQ(cleaner.powers.back(), rvc::PowerLevel::NORMAL);
 }
 
-// 매니저가 nullptr인 상태에서 onEnter 호출해도 크래시가 없어야 한다.
-TEST_F(CleaningStateTest, OnEnterHandlesNullManagers) {
-    rvc::RVCController emptyController;
-    EXPECT_NO_THROW(state.onEnter(emptyController));
-}
-
 // onExit 호출이 어떠한 부수효과도 발생시키지 않아야 한다.
 TEST_F(CleaningStateTest, OnExitIsNoOp) {
     state.onEnter(controller);
@@ -153,8 +180,6 @@ TEST_F(CleaningStateTest, OnExitIsNoOp) {
 }
 
 // handleObstacle 호출 시 AvoidingState 인계 직전에 cleaner OFF 명령이 push 되어야 한다.
-// AvoidingState → CleaningState 재진입이 동기적으로 일어나 최종 powerLevel 은 다시 NORMAL 이
-// 되므로 OFF 가 발생했는지만 검증한다.
 TEST_F(CleaningStateTest, HandleObstacleStopsCleaning) {
     state.onEnter(controller);
     cleaner.powers.clear();
@@ -225,12 +250,6 @@ TEST_F(CleaningStateTest, HandleObstaclePassesObstacleValuesToAvoidanceFlow) {
     EXPECT_NE(dynamic_cast<rvc::CleaningState*>(current), nullptr);
 }
 
-// 매니저가 nullptr 일 때 handleObstacle 호출이 크래시 없이 동작해야 한다.
-TEST_F(CleaningStateTest, HandleObstacleHandlesNullManagers) {
-    rvc::RVCController emptyController;
-    EXPECT_NO_THROW(state.handleObstacle(emptyController, true, false, false));
-}
-
 // handleDust(true) 호출 시 청소 매니저로 dust 이벤트가 전달되어야 한다.
 TEST_F(CleaningStateTest, HandleDustTrueForwardsToCleaningManager) {
     state.onEnter(controller);
@@ -259,13 +278,6 @@ TEST_F(CleaningStateTest, HandleDustDoesNotTransitionState) {
     spy.handleDust(controller, true);
 
     EXPECT_FALSE(spy.onExitCalled);
-}
-
-// 매니저가 nullptr 일 때 handleDust 호출이 크래시 없이 동작해야 한다.
-TEST_F(CleaningStateTest, HandleDustHandlesNullManagers) {
-    rvc::RVCController emptyController;
-    EXPECT_NO_THROW(state.handleDust(emptyController, true));
-    EXPECT_NO_THROW(state.handleDust(emptyController, false));
 }
 
 // handlePowerOff 호출 시 청소가 중지되어야 한다.
@@ -298,7 +310,6 @@ TEST_F(CleaningStateTest, HandlePowerOffTransitionsToOffState) {
 
     spy.handlePowerOff(controller);
 
-    // 전환 이후 onObstacleDetected 호출은 OffState 의 no-op 으로 흡수되어야 함
     motor.moves.clear();
     cleaner.powers.clear();
     controller.onObstacleDetected(true, true, true);
@@ -317,12 +328,6 @@ TEST_F(CleaningStateTest, HandlePowerOffTriggersStateTransition) {
     EXPECT_TRUE(spy.onExitCalled);
 }
 
-// 매니저가 nullptr 일 때 handlePowerOff 호출이 크래시 없이 동작해야 한다.
-TEST_F(CleaningStateTest, HandlePowerOffHandlesNullManagers) {
-    rvc::RVCController emptyController;
-    EXPECT_NO_THROW(state.handlePowerOff(emptyController));
-}
-
 // CleaningState onEnter → handleDust → handleObstacle → AvoidingState 인계 흐름이 일관되게 동작.
 TEST_F(CleaningStateTest, EndToEndScenarioHandsOffToAvoiding) {
     state.onEnter(controller);
@@ -332,12 +337,8 @@ TEST_F(CleaningStateTest, EndToEndScenarioHandsOffToAvoiding) {
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::POWER_UP);
 
     state.handleObstacle(controller, true, false, false);
-    // 회피 인계 직전에 OFF 가 cleaner 에 한 번이라도 push 되었는지 검증.
-    // (AvoidingState→CleaningState 재진입으로 최종 powerLevel 은 NORMAL 로 돌아옴)
     EXPECT_TRUE(std::find(cleaner.powers.begin(), cleaner.powers.end(), rvc::PowerLevel::OFF) !=
                 cleaner.powers.end());
     EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::STOP));
-    // AvoidingState.onEnter 가 executeAvoidance 로 LEFT 회피 명령을 push 했다면,
-    // 실제로 AvoidingState 까지 인계가 일어났다는 증거.
     EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::LEFT));
 }

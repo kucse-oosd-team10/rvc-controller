@@ -1,9 +1,7 @@
 #include "rvc/cleaning_state.hpp"
 
-#include "rvc/avoiding_state.hpp"
 #include "rvc/cleaning_manager.hpp"
 #include "rvc/movement_manager.hpp"
-#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 
 namespace rvc {
@@ -34,8 +32,7 @@ void CleaningState::handleObstacle(RVCController& ctx, bool front, bool left, bo
         movementMgr->stop();
     }
 
-    // TODO(Phase 3): RVCController owning 슬롯 사용으로 교체. 현재는 develop 의 임시 패턴 따름.
-    ctx.setState(new AvoidingState(front, left, right));
+    ctx.enterAvoiding(front, left, right);
 }
 
 void CleaningState::handleDust(RVCController& ctx, bool detected) {
@@ -56,8 +53,7 @@ void CleaningState::handlePowerOff(RVCController& ctx) {
         movementMgr->stop();
     }
 
-    static OffState offState;
-    ctx.setState(&offState);
+    ctx.enterOff();
 }
 
 } // namespace rvc

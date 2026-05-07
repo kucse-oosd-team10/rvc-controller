@@ -1,7 +1,13 @@
 #pragma once
 
+#include "rvc/cleaning_state.hpp"
+#include "rvc/error_state.hpp"
 #include "rvc/i_rvc_state.hpp"
 #include "rvc/i_sensor_observer.hpp"
+#include "rvc/initializing_state.hpp"
+#include "rvc/off_state.hpp"
+
+#include <memory>
 
 namespace rvc {
 
@@ -10,10 +16,16 @@ class CleaningManager;
 class ObstacleSensorSubject;
 class DustSensorSubject;
 class IObstacleSensor;
+class IDustSensor;
+class IMotor;
+class ICleaner;
+class AvoidingState;
 
 class RVCController : public ISensorObserver {
 public:
-    RVCController();
+    RVCController(IObstacleSensor& obstacleSensor, IDustSensor& dustSensor, IMotor& motor,
+                  ICleaner& cleaner, MovementManager& movementMgr, CleaningManager& cleaningMgr,
+                  ObstacleSensorSubject& obstacleSub, DustSensorSubject& dustSub);
     ~RVCController() override;
 
     RVCController(const RVCController&) = delete;
@@ -21,8 +33,9 @@ public:
     RVCController(RVCController&&) = delete;
     RVCController& operator=(RVCController&&) = delete;
 
-    void powerOn() const;
+    void powerOn();
     void powerOff();
+    void tick();
 
     void onObstacleDetected(bool front, bool left, bool right) override;
     void onDustDetected(bool detected) override;
@@ -34,23 +47,36 @@ public:
     CleaningManager* getCleaningManager();
     ObstacleSensorSubject* getObstacleSensorSubject();
     DustSensorSubject* getDustSensorSubject();
-
-    // AvoidingState 의 라이브 IObstacleSensor 조회 경로
     IObstacleSensor* getObstacleSensor();
 
-    // TODO: 아래 nullable setter 3종은 Phase 1~2 의 임시 주입 API.
-    // RVCController 생성자 주입으로 교체 후 제거 예정.
-    void setMovementManager(MovementManager* manager);
-    void setCleaningManager(CleaningManager* manager);
-    void setObstacleSensor(IObstacleSensor* sensor);
-
 private:
+    friend class AvoidingState;
+    friend class CleaningState;
+    friend class ErrorState;
+    friend class InitializingState;
+
+    void enterOff();
+    void enterInitializing();
+    void enterCleaning();
+    void enterError();
+    void enterAvoiding(bool front, bool left, bool right);
+
+    IObstacleSensor* obstacleSensor_;
+    IDustSensor* dustSensor_;
+    IMotor* motor_;
+    ICleaner* cleaner_;
+    MovementManager* movementMgr_;
+    CleaningManager* cleaningMgr_;
+    ObstacleSensorSubject* obstacleSub_;
+    DustSensorSubject* dustSub_;
+
+    OffState offState_;
+    InitializingState initializingState_;
+    CleaningState cleaningState_;
+    ErrorState errorState_;
+    std::unique_ptr<AvoidingState> currentAvoiding_;
+
     IRVCState* currentState_{nullptr};
-    MovementManager* movementMgr_{nullptr};
-    CleaningManager* cleaningMgr_{nullptr};
-    ObstacleSensorSubject* obstacleSub_{nullptr};
-    DustSensorSubject* dustSub_{nullptr};
-    IObstacleSensor* obstacleSensor_{nullptr};
 };
 
 } // namespace rvc

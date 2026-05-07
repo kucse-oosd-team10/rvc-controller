@@ -2,11 +2,14 @@
 #include "rvc/cleaning_manager.hpp"
 #include "rvc/cleaning_state.hpp"
 #include "rvc/default_avoid_strategy.hpp"
+#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/i_cleaner.hpp"
+#include "rvc/i_dust_sensor.hpp"
 #include "rvc/i_motor.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/i_rvc_state.hpp"
 #include "rvc/movement_manager.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
 #include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
@@ -49,8 +52,6 @@ public:
     int callCount{0};
 };
 
-// 테스트 시나리오마다 센서 응답 시퀀스를 다르게 줄 수 있는 Fake 센서.
-// *_seq 가 비어 있지 않으면 큐에서 하나씩 꺼내고, 비면 *_default 값을 반환한다.
 class FakeObstacleSensor : public rvc::IObstacleSensor {
 public:
     bool initialize() override {
@@ -98,6 +99,17 @@ public:
     int right_reads{0};
 };
 
+class FakeDustSensor : public rvc::IDustSensor {
+public:
+    bool initialize() override {
+        return true;
+    }
+
+    bool isDustDetected() override {
+        return false;
+    }
+};
+
 class MockClock {
 public:
     [[nodiscard]] std::int64_t now() const {
@@ -114,19 +126,18 @@ protected:
     FakeMotor motor;
     FakeCleaner cleaner;
     FakeObstacleSensor sensor;
+    FakeDustSensor dustSensor;
     rvc::DefaultAvoidStrategy strategy;
     MockClock clock;
+
     rvc::MovementManager mm{motor, strategy};
     rvc::CleaningManager cm{cleaner, [this] {
                                 return clock.now();
                             }};
-    rvc::RVCController controller;
+    rvc::ObstacleSensorSubject obstacleSub{sensor};
+    rvc::DustSensorSubject dustSub{dustSensor};
 
-    void SetUp() override {
-        controller.setMovementManager(&mm);
-        controller.setCleaningManager(&cm);
-        controller.setObstacleSensor(&sensor);
-    }
+    rvc::RVCController controller{sensor, dustSensor, motor, cleaner, mm, cm, obstacleSub, dustSub};
 
     static bool containsDirection(const std::vector<rvc::Direction>& dirs, rvc::Direction target) {
         return std::find(dirs.begin(), dirs.end(), target) != dirs.end();
@@ -134,7 +145,6 @@ protected:
 };
 
 // 전방만 막혔을 때 후진 없이 곧바로 좌측 회피로 turn 호출이 일어난다
-// (CleaningState 인계 시 뒤이어 FORWARD 가 push 되므로 motor.last 가 아닌 contains 로 검증)
 TEST_F(AvoidingStateTest, OnEnterFrontOnlyTurnsLeftWithoutReversing) {
     rvc::AvoidingState state{true, false, false};
     state.onEnter(controller);
@@ -154,9 +164,6 @@ TEST_F(AvoidingStateTest, OnEnterFrontLeftBlockedTurnsRight) {
 
 // 사방이 막힌 상황에서 한쪽이 풀릴 때까지 후진 후 회피 방향을 결정한다
 TEST_F(AvoidingStateTest, OnEnterAllBlockedReversesUntilSideClears) {
-    // 후진 루프 1회차 재확인: left=true, right=true → 계속 후진
-    // 후진 루프 2회차 재확인: left=false → 후진 종료
-    // 후진 완료 후 재확인: front=false, left=false, right=false → FORWARD
     sensor.left_seq = {true, false, false};
     sensor.right_seq = {true, true, false};
     sensor.front_seq = {false};
@@ -185,7 +192,6 @@ TEST_F(AvoidingStateTest, OnEnterAllBlockedExitsAfterSingleReverseWhenLeftClears
 }
 
 // onEnter 회피 완료 후 currentState_ 가 CleaningState 인스턴스로 전환되어야 한다.
-// (placeholder nullptr 전환을 계약으로 굳히지 않도록 실제 다음 State 타입을 검증)
 TEST_F(AvoidingStateTest, OnEnterTransitionsToCleaningStateAfterAvoidance) {
     rvc::AvoidingState state{true, false, false};
     controller.setState(&state);
@@ -193,27 +199,6 @@ TEST_F(AvoidingStateTest, OnEnterTransitionsToCleaningStateAfterAvoidance) {
     auto* current = controller.getCurrentState();
     ASSERT_NE(current, nullptr);
     EXPECT_NE(dynamic_cast<rvc::CleaningState*>(current), nullptr);
-}
-
-// MovementManager 가 주입되지 않았으면 onEnter 는 조기 반환하고 모터/센서 호출이 없다
-TEST_F(AvoidingStateTest, OnEnterReturnsEarlyWithoutMovementManager) {
-    controller.setMovementManager(nullptr);
-    rvc::AvoidingState state{true, true, true};
-    state.onEnter(controller);
-
-    EXPECT_TRUE(motor.directions.empty());
-    EXPECT_EQ(sensor.front_reads, 0);
-    EXPECT_EQ(sensor.left_reads, 0);
-    EXPECT_EQ(sensor.right_reads, 0);
-}
-
-// 후진 분기가 필요하지만 ObstacleSensor 가 없으면 후진/회피를 시도하지 않고 반환한다
-TEST_F(AvoidingStateTest, OnEnterReturnsEarlyWhenSensorMissingDuringReverse) {
-    controller.setObstacleSensor(nullptr);
-    rvc::AvoidingState state{true, true, true};
-    state.onEnter(controller);
-
-    EXPECT_TRUE(motor.directions.empty());
 }
 
 // 회피 중 handleDust(true) 는 CleaningManager 캐시를 true 로 갱신한다
@@ -240,14 +225,6 @@ TEST_F(AvoidingStateTest, HandleDustDuringAvoidanceDoesNotPowerOnCleaner) {
 
     EXPECT_EQ(cleaner.last, rvc::PowerLevel::OFF);
     EXPECT_EQ(cm.getPowerLevel(), rvc::PowerLevel::OFF);
-}
-
-// CleaningManager 가 주입되지 않은 경우 handleDust 호출은 안전하게 무시된다
-TEST_F(AvoidingStateTest, HandleDustWithoutCleaningManagerIsNoop) {
-    controller.setCleaningManager(nullptr);
-    rvc::AvoidingState state{false, false, false};
-
-    EXPECT_NO_THROW(state.handleDust(controller, true));
 }
 
 // 회피 중에는 새로 들어온 handleObstacle 이벤트를 무시하므로 모터 호출이 발생하지 않는다
@@ -278,16 +255,5 @@ TEST_F(AvoidingStateTest, HandlePowerOffStopsAndTransitionsToOff) {
     EXPECT_EQ(motor.last, rvc::Direction::STOP);
     EXPECT_EQ(cm.getPowerLevel(), rvc::PowerLevel::OFF);
     EXPECT_NE(controller.getCurrentState(), nullptr);
-    EXPECT_NE(dynamic_cast<rvc::OffState*>(controller.getCurrentState()), nullptr);
-}
-
-// MovementManager 와 CleaningManager 가 모두 없는 상태에서도 handlePowerOff 는 OffState 전이를
-// 수행한다
-TEST_F(AvoidingStateTest, HandlePowerOffIsRobustToMissingDependencies) {
-    controller.setMovementManager(nullptr);
-    controller.setCleaningManager(nullptr);
-
-    rvc::AvoidingState state{false, false, false};
-    EXPECT_NO_THROW(state.handlePowerOff(controller));
     EXPECT_NE(dynamic_cast<rvc::OffState*>(controller.getCurrentState()), nullptr);
 }
