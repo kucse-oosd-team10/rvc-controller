@@ -43,12 +43,6 @@ public:
     void setState(IRVCState* state);
     [[nodiscard]] IRVCState* getCurrentState() const;
 
-    void enterOff();
-    void enterInitializing();
-    void enterCleaning();
-    void enterError();
-    void enterAvoiding(bool front, bool left, bool right);
-
     MovementManager* getMovementManager();
     CleaningManager* getCleaningManager();
     ObstacleSensorSubject* getObstacleSensorSubject();
@@ -56,6 +50,17 @@ public:
     IObstacleSensor* getObstacleSensor();
 
 private:
+    friend class AvoidingState;
+    friend class CleaningState;
+    friend class ErrorState;
+    friend class InitializingState;
+
+    void enterOff();
+    void enterInitializing();
+    void enterCleaning();
+    void enterError();
+    void enterAvoiding(bool front, bool left, bool right);
+
     IObstacleSensor* obstacleSensor_;
     IDustSensor* dustSensor_;
     IMotor* motor_;

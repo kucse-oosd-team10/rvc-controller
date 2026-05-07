@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <functional>
 #include <sstream>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -24,51 +25,71 @@ namespace {
 class FakeMotor : public rvc::IMotor {
 public:
     bool initialize() override {
+        ++initCallCount;
         return true;
     }
 
-    void move(rvc::Direction /*direction*/) override {
+    void move(rvc::Direction direction) override {
+        moves.push_back(direction);
     }
+
+    int initCallCount{0};
+    std::vector<rvc::Direction> moves;
 };
 
 class FakeCleaner : public rvc::ICleaner {
 public:
     bool initialize() override {
+        ++initCallCount;
         return true;
     }
 
-    void setPower(rvc::PowerLevel /*level*/) override {
+    void setPower(rvc::PowerLevel level) override {
+        powers.push_back(level);
     }
+
+    int initCallCount{0};
+    std::vector<rvc::PowerLevel> powers;
 };
 
 class FakeObstacleSensor : public rvc::IObstacleSensor {
 public:
     bool initialize() override {
+        ++initCallCount;
         return true;
     }
 
     bool isFrontDetected() override {
-        return false;
+        return frontDetected;
     }
 
     bool isLeftDetected() override {
-        return false;
+        return leftDetected;
     }
 
     bool isRightDetected() override {
-        return false;
+        return rightDetected;
     }
+
+    int initCallCount{0};
+    bool frontDetected{false};
+    bool leftDetected{false};
+    bool rightDetected{false};
 };
 
 class FakeDustSensor : public rvc::IDustSensor {
 public:
     bool initialize() override {
+        ++initCallCount;
         return true;
     }
 
     bool isDustDetected() override {
-        return false;
+        return dustDetected;
     }
+
+    int initCallCount{0};
+    bool dustDetected{false};
 };
 
 class FakeAvoidStrategy : public rvc::IAvoidStrategy {
@@ -229,14 +250,47 @@ TEST_F(RVCControllerTest, PowerOnTransitionsToCleaningStateOnSuccess) {
     EXPECT_NE(dynamic_cast<rvc::CleaningState*>(current), nullptr);
 }
 
+// powerOn 은 OffState 에서만 초기화를 시작해야 한다
+TEST_F(RVCControllerTest, PowerOnIsNoopOutsideOffState) {
+    suppressCout([&] {
+        controller.powerOn();
+    });
+    ASSERT_NE(dynamic_cast<rvc::CleaningState*>(controller.getCurrentState()), nullptr);
+
+    const int obstacleInitCount = obstacleSensor.initCallCount;
+    const int dustInitCount = dustSensor.initCallCount;
+    const int motorInitCount = motor.initCallCount;
+    const int cleanerInitCount = cleaner.initCallCount;
+
+    std::ostringstream captured;
+    std::streambuf* old = std::cout.rdbuf(captured.rdbuf());
+    controller.powerOn();
+    std::cout.rdbuf(old);
+
+    EXPECT_TRUE(captured.str().empty());
+    EXPECT_EQ(obstacleSensor.initCallCount, obstacleInitCount);
+    EXPECT_EQ(dustSensor.initCallCount, dustInitCount);
+    EXPECT_EQ(motor.initCallCount, motorInitCount);
+    EXPECT_EQ(cleaner.initCallCount, cleanerInitCount);
+    EXPECT_NE(dynamic_cast<rvc::CleaningState*>(controller.getCurrentState()), nullptr);
+}
+
 // powerOn 성공 후 obstacle/dust Subject 에 controller 가 attach 되어 이벤트 흐름이 연결된다
 TEST_F(RVCControllerTest, PowerOnAttachesObserverOnSuccess) {
     suppressCout([&] {
         controller.powerOn();
     });
 
-    EXPECT_NO_THROW(obstacleSub.notify());
-    EXPECT_NO_THROW(dustSub.notify());
+    motor.moves.clear();
+    obstacleSensor.frontDetected = true;
+    obstacleSub.poll();
+    EXPECT_FALSE(motor.moves.empty());
+
+    dustSensor.dustDetected = true;
+    dustSub.poll();
+    EXPECT_TRUE(cleaningMgr.getLatestDustDetected());
+    EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::POWER_UP);
+
     EXPECT_NO_THROW(suppressCout([&] {
         controller.powerOff();
     }));

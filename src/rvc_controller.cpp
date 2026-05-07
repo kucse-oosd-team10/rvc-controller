@@ -23,11 +23,12 @@ RVCController::RVCController(IObstacleSensor& obstacleSensor, IDustSensor& dustS
 RVCController::~RVCController() = default;
 
 void RVCController::powerOn() {
-    enterInitializing();
-    if (dynamic_cast<InitializingState*>(currentState_) != nullptr) {
+    if (currentState_ != &offState_) {
         return;
     }
-    if (dynamic_cast<ErrorState*>(currentState_) != nullptr) {
+
+    enterInitializing();
+    if (currentState_ != &cleaningState_) {
         return;
     }
     obstacleSub_->attach(this);
