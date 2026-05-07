@@ -22,13 +22,17 @@ void ErrorState::onEnter(RVCController& ctx) {
     }
 }
 
-void ErrorState::onExit(RVCController& /*ctx*/) {}
+void ErrorState::onExit(RVCController& /*ctx*/) {
+}
 
 void ErrorState::handleObstacle(RVCController& /*ctx*/, bool /*front*/, bool /*left*/,
-                                bool /*right*/) {}
+                                bool /*right*/) {
+}
 
-void ErrorState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {}
+void ErrorState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {
+}
 
-void ErrorState::handlePowerOff(RVCController& /*ctx*/) {}
+void ErrorState::handlePowerOff(RVCController& /*ctx*/) {
+}
 
 } // namespace rvc

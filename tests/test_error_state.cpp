@@ -7,23 +7,36 @@
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
-#include <gtest/gtest.h>
 #include <sstream>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 namespace {
 
 class FakeMotor : public rvc::IMotor {
 public:
-    bool initialize() override { return true; }
-    void move(rvc::Direction direction) override { moves.push_back(direction); }
+    bool initialize() override {
+        return true;
+    }
+
+    void move(rvc::Direction direction) override {
+        moves.push_back(direction);
+    }
+
     std::vector<rvc::Direction> moves;
 };
 
 class FakeCleaner : public rvc::ICleaner {
 public:
-    bool initialize() override { return true; }
-    void setPower(rvc::PowerLevel level) override { powers.push_back(level); }
+    bool initialize() override {
+        return true;
+    }
+
+    void setPower(rvc::PowerLevel level) override {
+        powers.push_back(level);
+    }
+
     std::vector<rvc::PowerLevel> powers;
 };
 
@@ -32,12 +45,17 @@ public:
     rvc::Direction decideDirection(bool /*front*/, bool /*left*/, bool /*right*/) override {
         return rvc::Direction::FORWARD;
     }
-    bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override { return false; }
+
+    bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override {
+        return false;
+    }
 };
 
 class FakeClock {
 public:
-    static std::int64_t now() { return 0; }
+    static std::int64_t now() {
+        return 0;
+    }
 };
 
 } // namespace
@@ -49,7 +67,9 @@ protected:
     FakeAvoidStrategy strategy;
     FakeClock clock;
     rvc::MovementManager movementMgr{motor, strategy};
-    rvc::CleaningManager cleaningMgr{cleaner, [] { return FakeClock::now(); }};
+    rvc::CleaningManager cleaningMgr{cleaner, [] {
+                                         return FakeClock::now();
+                                     }};
     rvc::RVCController controller;
     rvc::ErrorState state;
 

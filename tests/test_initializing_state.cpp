@@ -8,9 +8,10 @@
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
-#include <gtest/gtest.h>
 #include <sstream>
 #include <vector>
+
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -25,9 +26,18 @@ public:
         }
         return defaultInitResult;
     }
-    bool isFrontDetected() override { return false; }
-    bool isLeftDetected() override { return false; }
-    bool isRightDetected() override { return false; }
+
+    bool isFrontDetected() override {
+        return false;
+    }
+
+    bool isLeftDetected() override {
+        return false;
+    }
+
+    bool isRightDetected() override {
+        return false;
+    }
 
     int initCallCount{0};
     bool defaultInitResult{true};
@@ -40,7 +50,10 @@ public:
         initCallCount++;
         return defaultInitResult;
     }
-    bool isDustDetected() override { return false; }  // NOLINT
+
+    bool isDustDetected() override {
+        return false;
+    } // NOLINT
 
     int initCallCount{0};
     bool defaultInitResult{true};
@@ -52,7 +65,9 @@ public:
         initCallCount++;
         return defaultInitResult;
     }
-    void move(rvc::Direction /*direction*/) override {}
+
+    void move(rvc::Direction /*direction*/) override {
+    }
 
     int initCallCount{0};
     bool defaultInitResult{true};
@@ -64,7 +79,9 @@ public:
         initCallCount++;
         return defaultInitResult;
     }
-    void setPower(rvc::PowerLevel /*level*/) override {}
+
+    void setPower(rvc::PowerLevel /*level*/) override {
+    }
 
     int initCallCount{0};
     bool defaultInitResult{true};

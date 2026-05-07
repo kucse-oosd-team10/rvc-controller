@@ -29,13 +29,17 @@ void InitializingState::onEnter(RVCController& ctx) {
     ctx.setState(new ErrorState());
 }
 
-void InitializingState::onExit(RVCController& /*ctx*/) {}
+void InitializingState::onExit(RVCController& /*ctx*/) {
+}
 
 void InitializingState::handleObstacle(RVCController& /*ctx*/, bool /*front*/, bool /*left*/,
-                                       bool /*right*/) {}
+                                       bool /*right*/) {
+}
 
-void InitializingState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {}
+void InitializingState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {
+}
 
-void InitializingState::handlePowerOff(RVCController& /*ctx*/) {}
+void InitializingState::handlePowerOff(RVCController& /*ctx*/) {
+}
 
 } // namespace rvc

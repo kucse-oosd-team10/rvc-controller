@@ -11,8 +11,8 @@ class ICleaner;
 
 class InitializingState : public IRVCState {
 public:
-    InitializingState(IObstacleSensor& obstacleSensor, IDustSensor& dustSensor,
-                      IMotor& motor, ICleaner& cleaner);
+    InitializingState(IObstacleSensor& obstacleSensor, IDustSensor& dustSensor, IMotor& motor,
+                      ICleaner& cleaner);
     ~InitializingState() override = default;
 
     InitializingState(const InitializingState&) = delete;
