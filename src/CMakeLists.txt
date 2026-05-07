@@ -10,6 +10,8 @@ add_library(rvc_lib
     cleaning_manager.cpp
     avoiding_state.cpp
     cleaning_state.cpp
+    error_state.cpp
+    initializing_state.cpp
 )
 
 target_include_directories(rvc_lib

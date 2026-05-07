@@ -20,6 +20,8 @@ add_executable(rvc_tests
     test_cleaning_manager.cpp
     test_avoiding_state.cpp
     test_cleaning_state.cpp
+    test_error_state.cpp
+    test_initializing_state.cpp
 )
 
 target_link_libraries(rvc_tests
