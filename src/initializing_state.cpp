@@ -17,9 +17,15 @@ InitializingState::InitializingState(IObstacleSensor& obstacleSensor, IDustSenso
 }
 
 void InitializingState::onEnter(RVCController& ctx) {
+    retryCount_ = 0;
+
     while (retryCount_ < maxRetry) {
-        if (obstacleSensor_.initialize() && dustSensor_.initialize() && motor_.initialize() &&
-            cleaner_.initialize()) {
+        const bool obstacleInitialized = obstacleSensor_.initialize();
+        const bool dustInitialized = dustSensor_.initialize();
+        const bool motorInitialized = motor_.initialize();
+        const bool cleanerInitialized = cleaner_.initialize();
+
+        if (obstacleInitialized && dustInitialized && motorInitialized && cleanerInitialized) {
             // TODO: owning 슬롯으로 교체
             ctx.setState(new CleaningState());
             return;
