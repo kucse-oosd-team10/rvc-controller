@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from typing import List
+from typing import Callable, List, Optional, Tuple
 
 from .robot import Robot
 from .rvc import (
@@ -19,6 +19,8 @@ from .rvc import (
 )
 from .types import Pose
 from .world import World
+
+ClockFn = Callable[[], int]
 
 
 class SimMotor(IMotor):
@@ -37,11 +39,20 @@ class SimMotor(IMotor):
       double-stepping on the tick a state transition issues a fresh command.
     """
 
-    def __init__(self, robot: Robot, world: World, *, init_fail_count: int = 0) -> None:
+    def __init__(
+        self,
+        robot: Robot,
+        world: World,
+        *,
+        init_fail_count: int = 0,
+        clock: Optional[ClockFn] = None,
+    ) -> None:
         super().__init__()
         self._robot = robot
         self._world = world
+        self._clock = clock
         self.history: List[Direction] = []
+        self.history_with_time: List[Tuple[Direction, int]] = []
         self._init_fail_remaining = init_fail_count
         self._linear_motion: Direction = Direction.STOP
         self._commanded_this_tick: bool = False
@@ -62,6 +73,8 @@ class SimMotor(IMotor):
 
     def move(self, direction: Direction) -> None:
         self.history.append(direction)
+        now_ms = self._clock() if self._clock is not None else 0
+        self.history_with_time.append((direction, now_ms))
         self._commanded_this_tick = True
         if direction in (Direction.FORWARD, Direction.BACKWARD):
             self._linear_motion = direction
@@ -104,11 +117,22 @@ class SimCleaner(ICleaner):
 
 
 class SimObstacleSensor(IObstacleSensor):
+    """Obstacle sensor with interrupt-mode override.
+
+    `force_front_reads` mirrors the real interrupt path: while non-zero, the
+    next N isFrontDetected() calls return True regardless of world state.
+    Set to 2 by the runner to cover both ObstacleSensorSubject.onInterrupt()
+    (one read) and the immediately-following poll() (one more read) inside the
+    same controller.tick(), so the forced state survives long enough for the
+    state machine to act on it.
+    """
+
     def __init__(self, world: World, robot: Robot, *, init_fail_count: int = 0) -> None:
         super().__init__()
         self._world = world
         self._robot = robot
         self._init_fail_remaining = init_fail_count
+        self.force_front_reads: int = 0
 
     def initialize(self) -> bool:
         if self._init_fail_remaining > 0:
@@ -116,7 +140,13 @@ class SimObstacleSensor(IObstacleSensor):
             return False
         return True
 
+    def arm_front_interrupt(self, reads: int = 2) -> None:
+        self.force_front_reads = max(self.force_front_reads, reads)
+
     def isFrontDetected(self) -> bool:
+        if self.force_front_reads > 0:
+            self.force_front_reads -= 1
+            return True
         return self._world.is_blocked(self._robot.pose.front_pos())
 
     def isLeftDetected(self) -> bool:
@@ -127,11 +157,19 @@ class SimObstacleSensor(IObstacleSensor):
 
 
 class SimDustSensor(IDustSensor):
+    """Dust sensor with optional override sequence.
+
+    `override_sequence` is a list of bool consumed once-per-poll (FIFO). When
+    exhausted, falls back to world.detect_dust(robot.pose). Used by NFR-03 to
+    drive POWER_UP timing without needing exact world dust placement.
+    """
+
     def __init__(self, world: World, robot: Robot, *, init_fail_count: int = 0) -> None:
         super().__init__()
         self._world = world
         self._robot = robot
         self._init_fail_remaining = init_fail_count
+        self.override_sequence: List[bool] = []
 
     def initialize(self) -> bool:
         if self._init_fail_remaining > 0:
@@ -140,4 +178,6 @@ class SimDustSensor(IDustSensor):
         return True
 
     def isDustDetected(self) -> bool:
+        if self.override_sequence:
+            return self.override_sequence.pop(0)
         return self._world.detect_dust(self._robot.pose)

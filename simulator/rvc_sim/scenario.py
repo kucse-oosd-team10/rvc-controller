@@ -45,6 +45,20 @@ class WorldSpec:
     obstacles: List[Tuple[int, int]] = field(default_factory=list)
     dust: List[Tuple[Tuple[int, int], float]] = field(default_factory=list)
     dust_threshold: float = 0.5
+    dust_replenish_interval_ticks: Optional[int] = None
+    dust_replenish_amount: float = 1.0
+
+
+@dataclass
+class InterruptEvent:
+    tick: int
+    sub_phase: str = "before_poll"
+
+
+@dataclass
+class DustOverrideEvent:
+    tick: int
+    value: bool
 
 
 @dataclass
@@ -80,6 +94,8 @@ class Scenario:
     init_failures: InitFailures
     assertions: List[Dict[str, Any]]
     power_off_at_tick: Optional[int] = None
+    interrupts: List[InterruptEvent] = field(default_factory=list)
+    dust_sensor_override: List[DustOverrideEvent] = field(default_factory=list)
     source_path: Optional[Path] = None
 
 
@@ -99,12 +115,16 @@ def _from_dict(data: Dict[str, Any], *, source_path: Optional[Path] = None) -> S
         pos = tuple(entry["pos"])
         amount = float(entry["amount"])
         dust_entries.append((pos, amount))
+    replenish_interval = world_data.get("dust_replenish_interval_ticks")
     world = WorldSpec(
         width=int(size[0]),
         height=int(size[1]),
         obstacles=obstacles,
         dust=dust_entries,
         dust_threshold=float(world_data.get("dust_threshold", 0.5)),
+        dust_replenish_interval_ticks=
+            int(replenish_interval) if replenish_interval is not None else None,
+        dust_replenish_amount=float(world_data.get("dust_replenish_amount", 1.0)),
     )
 
     robot_data = data.get("robot", {})
@@ -128,6 +148,19 @@ def _from_dict(data: Dict[str, Any], *, source_path: Optional[Path] = None) -> S
         dust_sensor=int(init_fail_data.get("dust_sensor", 0)),
     )
 
+    interrupts = [
+        InterruptEvent(
+            tick=int(entry["tick"]),
+            sub_phase=str(entry.get("sub_phase", "before_poll")),
+        )
+        for entry in (data.get("interrupts") or [])
+    ]
+
+    dust_overrides = [
+        DustOverrideEvent(tick=int(entry["tick"]), value=bool(entry["value"]))
+        for entry in (data.get("dust_sensor_override") or [])
+    ]
+
     return Scenario(
         name=str(data.get("name", source_path.stem if source_path else "unnamed")),
         description=str(data.get("description", "")),
@@ -139,5 +172,7 @@ def _from_dict(data: Dict[str, Any], *, source_path: Optional[Path] = None) -> S
         init_failures=init_failures,
         assertions=list(data.get("assertions", []) or []),
         power_off_at_tick=data.get("power_off_at_tick"),
+        interrupts=interrupts,
+        dust_sensor_override=dust_overrides,
         source_path=source_path,
     )

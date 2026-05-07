@@ -53,3 +53,19 @@ class World:
 
     def record_collision(self, pos: Cell) -> None:
         self.collisions.append(pos)
+
+    def replenish_dust(self, amount: float = 1.0) -> None:
+        """Top up dust on every initially-dusty cell back to `amount`.
+
+        Used by long-run NFR scenarios to ensure the controller keeps finding
+        work to do without needing to seed thousands of dust cells upfront.
+        Cells with current dust above `amount` are left untouched.
+        """
+        if not hasattr(self, "_dust_seed_cells"):
+            return
+        for cell in self._dust_seed_cells:
+            if self.dust.get(cell, 0.0) < amount:
+                self.dust[cell] = amount
+
+    def seed_replenish(self) -> None:
+        self._dust_seed_cells = set(self.dust.keys())

@@ -207,3 +207,120 @@ def _collision_count_eq(spec, result):
         raise AssertionFailure(
             _msg(spec, f"collisions {actual} != {expected}")
         )
+
+
+_AVOIDANCE_DIRECTIONS = {"LEFT", "RIGHT", "BACKWARD"}
+
+
+def _first_avoidance_after(history_with_time, min_clock_ms: int):
+    for direction, t in history_with_time:
+        if t < min_clock_ms:
+            continue
+        if direction.name in _AVOIDANCE_DIRECTIONS:
+            return direction, t
+    return None
+
+
+@register("interrupt_response_within_ticks")
+def _interrupt_response_within_ticks(spec, result):
+    """NFR-01: an avoidance motor command must follow the interrupt tick within `max_ticks`.
+
+    AvoidingState.onEnter synchronously transitions back to Cleaning, so we
+    detect avoidance by its observable side effect (LEFT/RIGHT/BACKWARD motor
+    command) using the time-stamped motor history rather than the state name.
+    """
+    interrupt_tick = int(spec["interrupt_tick"])
+    max_delay = int(spec["max_ticks"])
+
+    trigger_clock_ms = None
+    for snap in result.snapshots:
+        if snap.tick == interrupt_tick:
+            trigger_clock_ms = snap.clock_ms
+            break
+    if trigger_clock_ms is None:
+        raise AssertionFailure(
+            _msg(spec, f"interrupt tick {interrupt_tick} not found in snapshots")
+        )
+
+    deadline_ms = trigger_clock_ms + max_delay * result.tick_duration_ms
+    hit = _first_avoidance_after(result.motor_history_with_time, trigger_clock_ms)
+    if hit is None:
+        raise AssertionFailure(
+            _msg(spec, f"no avoidance motor command observed after interrupt tick "
+                       f"{interrupt_tick} (clock={trigger_clock_ms}ms)")
+        )
+    direction, t = hit
+    if t > deadline_ms:
+        raise AssertionFailure(
+            _msg(spec, f"first avoidance command {direction.name} at {t}ms exceeds "
+                       f"deadline {deadline_ms}ms ({max_delay} tick(s) after interrupt)")
+        )
+
+
+@register("obstacle_to_avoid_within_ms")
+def _obstacle_to_avoid_within_ms(spec, result):
+    """NFR-02: an avoidance motor command must follow the trigger within `max_ms`."""
+    trigger_tick = int(spec["trigger_tick"])
+    max_ms = int(spec["max_ms"])
+
+    trigger_clock_ms = None
+    for snap in result.snapshots:
+        if snap.tick == trigger_tick:
+            trigger_clock_ms = snap.clock_ms
+            break
+    if trigger_clock_ms is None:
+        raise AssertionFailure(_msg(spec, f"trigger tick {trigger_tick} not found in snapshots"))
+
+    hit = _first_avoidance_after(result.motor_history_with_time, trigger_clock_ms)
+    if hit is None:
+        raise AssertionFailure(
+            _msg(spec, f"no avoidance motor command observed after trigger tick {trigger_tick}")
+        )
+    direction, t = hit
+    elapsed = t - trigger_clock_ms
+    if elapsed > max_ms:
+        raise AssertionFailure(
+            _msg(spec, f"first avoidance {direction.name} at {t}ms (elapsed {elapsed}ms) "
+                       f"exceeds {max_ms}ms after trigger tick {trigger_tick}")
+        )
+
+
+@register("cleaner_power_at_clock_ms")
+def _cleaner_power_at_clock_ms(spec, result):
+    """NFR-03: Cleaner power level at the snapshot whose clock_ms is closest to target."""
+    target_ms = int(spec["clock_ms"])
+    expected = PowerLevel.__members__[spec["expected"]]
+    tolerance_ms = int(spec.get("tolerance_ms", 0))
+    best = None
+    for snap in result.snapshots:
+        if best is None or abs(snap.clock_ms - target_ms) < abs(best.clock_ms - target_ms):
+            best = snap
+    if best is None:
+        raise AssertionFailure(_msg(spec, "no snapshots available"))
+    if abs(best.clock_ms - target_ms) > tolerance_ms:
+        raise AssertionFailure(
+            _msg(spec, f"closest snapshot at {best.clock_ms}ms is outside "
+                       f"tolerance {tolerance_ms}ms of {target_ms}ms")
+        )
+    if best.cleaner_power != expected:
+        raise AssertionFailure(
+            _msg(spec, f"cleaner power at {best.clock_ms}ms = {best.cleaner_power.name}, "
+                       f"expected {expected.name}")
+        )
+
+
+@register("state_never_in")
+def _state_never_in(spec, result):
+    """NFR-07: Controller must never enter any of the forbidden states during the run."""
+    forbidden = set(spec["states"])
+    from_tick = int(spec.get("from_tick", 0))
+    to_tick = spec.get("to_tick")
+    for snap in result.snapshots:
+        if snap.tick < from_tick:
+            continue
+        if to_tick is not None and snap.tick > int(to_tick):
+            break
+        if snap.state_name in forbidden:
+            raise AssertionFailure(
+                _msg(spec, f"forbidden state {snap.state_name!r} at tick {snap.tick}")
+            )

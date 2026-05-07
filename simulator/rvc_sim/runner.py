@@ -55,12 +55,14 @@ class RunResult:
     scenario: Scenario
     snapshots: List[Snapshot]
     motor_history: List[Direction]
+    motor_history_with_time: List[tuple]
     cleaner_history: List[PowerLevel]
     collisions: List[tuple]
     initial_dust: float
     final_dust: float
     state_after_power_off: str
     power_off_invoked: bool
+    tick_duration_ms: int = 100
 
 
 class GuiRenderer(Protocol):
@@ -77,13 +79,16 @@ def cleaning_rate_for(power: PowerLevel, rates: CleaningRates) -> float:
 
 def build_world(scenario: Scenario) -> World:
     spec = scenario.world
-    return World(
+    world = World(
         width=spec.width,
         height=spec.height,
         obstacles=set(spec.obstacles),
         dust=dict(spec.dust),
         dust_threshold=spec.dust_threshold,
     )
+    if spec.dust_replenish_interval_ticks is not None:
+        world.seed_replenish()
+    return world
 
 
 class SimulationRunner:
@@ -106,7 +111,10 @@ class SimulationRunner:
         self.clock = FakeClock()
 
         self.motor = SimMotor(
-            self.robot, self.world, init_fail_count=scenario.init_failures.motor
+            self.robot,
+            self.world,
+            init_fail_count=scenario.init_failures.motor,
+            clock=self.clock,
         )
         self.cleaner = SimCleaner(init_fail_count=scenario.init_failures.cleaner)
         self.obs_sensor = SimObstacleSensor(
@@ -122,6 +130,13 @@ class SimulationRunner:
         self.snapshots: List[Snapshot] = []
         self.gui = gui
         self._initial_dust = self.world.total_dust()
+
+        self._interrupts_by_tick: dict = {}
+        for ev in scenario.interrupts:
+            self._interrupts_by_tick.setdefault(ev.tick, []).append(ev)
+        self._dust_override_by_tick: dict = {}
+        for ev in scenario.dust_sensor_override:
+            self._dust_override_by_tick.setdefault(ev.tick, []).append(ev)
 
     def _build_controller(self) -> RVCController:
         self.strategy = DefaultAvoidStrategy()
@@ -156,6 +171,26 @@ class SimulationRunner:
             collision_count=len(self.world.collisions),
         )
 
+    def _dispatch_pre_tick_events(self, tick: int) -> None:
+        """Fire events scheduled before controller.tick() polls sensors.
+
+        - sub_phase=before_poll: arms force_front so the next isFrontDetected()
+          returns True, then calls onInterrupt() to mirror real ISR behavior.
+        - dust override: pushes the value at the head of the override queue.
+        """
+        for ev in self._interrupts_by_tick.get(tick, []):
+            if ev.sub_phase == "before_poll":
+                self.obs_sensor.arm_front_interrupt()
+                self.obs_sub.onInterrupt()
+        for ev in self._dust_override_by_tick.get(tick, []):
+            self.dust_sensor.override_sequence.append(ev.value)
+
+    def _dispatch_post_tick_events(self, tick: int) -> None:
+        for ev in self._interrupts_by_tick.get(tick, []):
+            if ev.sub_phase == "after_poll":
+                self.obs_sensor.arm_front_interrupt()
+                self.obs_sub.onInterrupt()
+
     def run(self) -> RunResult:
         self.controller.powerOn()
         self.snapshots.append(self._snapshot())
@@ -172,12 +207,19 @@ class SimulationRunner:
 
             self.clock.advance(self.tick_duration_ms)
             self.motor.begin_tick()
+
+            self._dispatch_pre_tick_events(self.tick_count)
             self.controller.tick()
+            self._dispatch_post_tick_events(self.tick_count)
             self.motor.step_continuous()
 
             rate = cleaning_rate_for(self.cleaner.current_power, self.scenario.cleaning_rates)
             if rate > 0:
                 self.world.collect_dust(self.robot.pose, rate)
+
+            replenish = self.scenario.world.dust_replenish_interval_ticks
+            if replenish and self.tick_count > 0 and self.tick_count % replenish == 0:
+                self.world.replenish_dust(self.scenario.world.dust_replenish_amount)
 
             self.tick_count += 1
             self.snapshots.append(self._snapshot())
@@ -197,10 +239,12 @@ class SimulationRunner:
             scenario=self.scenario,
             snapshots=list(self.snapshots),
             motor_history=list(self.motor.history),
+            motor_history_with_time=list(self.motor.history_with_time),
             cleaner_history=list(self.cleaner.power_history),
             collisions=list(self.world.collisions),
             initial_dust=self._initial_dust,
             final_dust=self.world.total_dust(),
             state_after_power_off=current_state_name(self.controller),
             power_off_invoked=power_off_invoked,
+            tick_duration_ms=self.tick_duration_ms,
         )
