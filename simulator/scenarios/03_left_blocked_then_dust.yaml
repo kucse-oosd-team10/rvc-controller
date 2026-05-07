@@ -1,6 +1,6 @@
 name: left_blocked_then_dust
 description: |
-  ST-006 derived. Truth table (front=T, left=T, right=F) → robot turns RIGHT
+  Truth table (front=T, left=T, right=F) → robot turns RIGHT
   to avoid, then continues cleaning. After avoidance, dust appears on the new
   path and the cleaner is engaged.
 

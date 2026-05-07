@@ -1,6 +1,6 @@
 name: obstacle_dust_simultaneous
 description: |
-  ST-025 derived. Both obstacle and dust events are present in the same tick.
+  Both obstacle and dust events are present in the same tick.
   Obstacle handling has priority; AvoidingState transitions are taken first,
   cleaner stays OFF/NORMAL during avoidance and POWER_UP only after the path
   resumes over a dusty cell.

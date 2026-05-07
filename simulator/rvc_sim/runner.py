@@ -196,14 +196,18 @@ class SimulationRunner:
         self.snapshots.append(self._snapshot())
 
         power_off_invoked = False
+        tail_remaining = -1
         for _ in range(self.scenario.max_ticks):
             if (
-                self.scenario.power_off_at_tick is not None
+                not power_off_invoked
+                and self.scenario.power_off_at_tick is not None
                 and self.tick_count == self.scenario.power_off_at_tick
             ):
                 self.controller.powerOff()
                 power_off_invoked = True
-                break
+                tail_remaining = self.scenario.tail_ticks_after_power_off
+                if tail_remaining <= 0:
+                    break
 
             self.clock.advance(self.tick_duration_ms)
             self.motor.begin_tick()
@@ -227,9 +231,15 @@ class SimulationRunner:
             if self.gui is not None:
                 if not self.gui.render(self):
                     break
+
+            if power_off_invoked:
+                tail_remaining -= 1
+                if tail_remaining <= 0:
+                    break
         else:
-            self.controller.powerOff()
-            power_off_invoked = True
+            if not power_off_invoked:
+                self.controller.powerOff()
+                power_off_invoked = True
 
         if not power_off_invoked:
             self.controller.powerOff()

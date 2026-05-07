@@ -1,6 +1,6 @@
 name: error_recovery
 description: |
-  ST-024 derived. After 3 motor.initialize() failures the controller enters
+  After 3 motor.initialize() failures the controller enters
   Error. powerOff from Error must succeed and return the controller to Off
   (no exceptions, motor stopped, cleaner OFF).
 

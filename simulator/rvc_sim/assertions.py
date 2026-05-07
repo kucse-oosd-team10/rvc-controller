@@ -309,6 +309,44 @@ def _cleaner_power_at_clock_ms(spec, result):
         )
 
 
+@register("motor_avoidance_count_eq")
+def _motor_avoidance_count_eq(spec, result):
+    expected = int(spec["value"])
+    actual = sum(1 for d in result.motor_history if d.name in _AVOIDANCE_DIRECTIONS)
+    if actual != expected:
+        raise AssertionFailure(
+            _msg(spec, f"avoidance commands {actual} != {expected} "
+                       f"(history={[d.name for d in result.motor_history]})")
+        )
+
+
+@register("motor_avoidance_count_after_clock_ms_eq")
+def _motor_avoidance_count_after_clock_ms_eq(spec, result):
+    """Count LEFT/RIGHT/BACKWARD commands issued at clock >= threshold_ms."""
+    threshold = int(spec["clock_ms"])
+    expected = int(spec["value"])
+    actual = sum(
+        1 for d, t in result.motor_history_with_time
+        if t >= threshold and d.name in _AVOIDANCE_DIRECTIONS
+    )
+    if actual != expected:
+        raise AssertionFailure(
+            _msg(spec, f"avoidance commands after {threshold}ms = {actual} != {expected}")
+        )
+
+
+@register("cleaner_power_count_eq")
+def _cleaner_power_count_eq(spec, result):
+    power = PowerLevel.__members__[spec["power"]]
+    expected = int(spec["value"])
+    actual = sum(1 for p in result.cleaner_history if p == power)
+    if actual != expected:
+        raise AssertionFailure(
+            _msg(spec, f"cleaner {power.name} count {actual} != {expected} "
+                       f"(history={[p.name for p in result.cleaner_history]})")
+        )
+
+
 @register("state_never_in")
 def _state_never_in(spec, result):
     """NFR-07: Controller must never enter any of the forbidden states during the run."""

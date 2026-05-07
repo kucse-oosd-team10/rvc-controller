@@ -1,6 +1,6 @@
 name: power_off_during_avoid
 description: |
-  ST-015 derived. Robot enters Avoiding because of an obstacle ahead, and a
+  Robot enters Avoiding because of an obstacle ahead, and a
   powerOff signal arrives mid-avoidance. Controller must transition to Off
   cleanly and stop the motor and cleaner regardless of avoidance phase.
 

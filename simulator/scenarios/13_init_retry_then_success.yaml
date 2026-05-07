@@ -1,6 +1,6 @@
 name: init_retry_then_success
 description: |
-  ST-023 derived. Motor.initialize() fails twice then succeeds on the 3rd
+  Motor.initialize() fails twice then succeeds on the 3rd
   attempt. Controller must reach Cleaning rather than Error since MAX_RETRY=3.
 
 tick_duration_ms: 100

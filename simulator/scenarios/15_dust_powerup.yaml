@@ -1,6 +1,6 @@
 name: dust_powerup
 description: |
-  ST-003/017/019 derived. Dust sensor reports True (amount ≥ threshold).
+  Dust sensor reports True (amount ≥ threshold).
   Cleaning state forwards the notification to CleaningManager which switches
   the cleaner to POWER_UP. After dust is exhausted the cleaner returns to
   NORMAL.

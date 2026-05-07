@@ -94,6 +94,7 @@ class Scenario:
     init_failures: InitFailures
     assertions: List[Dict[str, Any]]
     power_off_at_tick: Optional[int] = None
+    tail_ticks_after_power_off: int = 0
     interrupts: List[InterruptEvent] = field(default_factory=list)
     dust_sensor_override: List[DustOverrideEvent] = field(default_factory=list)
     source_path: Optional[Path] = None
@@ -172,6 +173,7 @@ def _from_dict(data: Dict[str, Any], *, source_path: Optional[Path] = None) -> S
         init_failures=init_failures,
         assertions=list(data.get("assertions", []) or []),
         power_off_at_tick=data.get("power_off_at_tick"),
+        tail_ticks_after_power_off=int(data.get("tail_ticks_after_power_off", 0)),
         interrupts=interrupts,
         dust_sensor_override=dust_overrides,
         source_path=source_path,

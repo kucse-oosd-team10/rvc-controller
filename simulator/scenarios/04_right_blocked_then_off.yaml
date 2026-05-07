@@ -1,6 +1,6 @@
 name: right_blocked_then_off
 description: |
-  ST-007 derived. Truth table (front=T, left=F, right=T) → strategy turns
+  Truth table (front=T, left=F, right=T) → strategy turns
   LEFT. Verifies that powerOff during/after avoidance returns the controller
   to Off cleanly with no collision.
 
