@@ -5,11 +5,21 @@ on:
     branches: [main, develop]
     paths:
       - "simulator/**"
+      - "bindings/**"
+      - "include/**"
+      - "src/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
       - ".github/workflows/system-tests.yml"
   pull_request:
     branches: [main, develop]
     paths:
       - "simulator/**"
+      - "bindings/**"
+      - "include/**"
+      - "src/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
       - ".github/workflows/system-tests.yml"
 
 jobs:
@@ -18,13 +28,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang python3-dev libsdl2-dev
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Install simulator (mock backend)
+      - name: Configure (with pybind11 bindings)
+        run: cmake --preset dev -DBUILD_PYTHON_BINDINGS=ON
+
+      - name: Build rvc binding
+        run: cmake --build build/dev --target rvc -j
+
+      - name: Install simulator
         working-directory: simulator
         run: |
           python -m pip install --upgrade pip
@@ -34,4 +55,13 @@ jobs:
         working-directory: simulator
         env:
           SDL_VIDEODRIVER: dummy
-        run: python -m pytest -v
+          PYTHONPATH: ${{ github.workspace }}/build/dev/bindings
+        run: python -m pytest -v --junit-xml=system-test-results.xml
+
+      - name: Publish test report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: System Test Results
+          path: simulator/system-test-results.xml
+          reporter: java-junit
