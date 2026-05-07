@@ -22,6 +22,11 @@ on:
       - "CMakePresets.json"
       - ".github/workflows/system-tests.yml"
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
   scenario-tests:
     runs-on: ubuntu-24.04
