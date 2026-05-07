@@ -1,3 +1,4 @@
+#include "rvc/avoiding_state.hpp"
 #include "rvc/cleaning_manager.hpp"
 #include "rvc/cleaning_state.hpp"
 #include "rvc/i_avoid_strategy.hpp"
@@ -7,6 +8,7 @@
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -47,9 +49,15 @@ public:
     }
 
     bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override {
-        return false;
+        return needsReverseValue;
     }
+
+    bool needsReverseValue{false};
 };
+
+bool containsDirection(const std::vector<rvc::Direction>& moves, rvc::Direction target) {
+    return std::find(moves.begin(), moves.end(), target) != moves.end();
+}
 
 class FakeClock {
 public:
@@ -140,7 +148,7 @@ TEST_F(CleaningStateTest, HandleObstacleStopsCleaning) {
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::OFF);
 }
 
-// handleObstacle 호출 시 모터가 정지되어야 한다.
+// handleObstacle 호출 시 AvoidingState 진입 전에 모터 STOP 명령이 먼저 들어가야 한다.
 TEST_F(CleaningStateTest, HandleObstacleStopsMotor) {
     state.onEnter(controller);
     motor.moves.clear();
@@ -148,10 +156,11 @@ TEST_F(CleaningStateTest, HandleObstacleStopsMotor) {
     state.handleObstacle(controller, true, false, false);
 
     ASSERT_FALSE(motor.moves.empty());
-    EXPECT_EQ(motor.moves.back(), rvc::Direction::STOP);
+    EXPECT_EQ(motor.moves.front(), rvc::Direction::STOP);
 }
 
-// handleObstacle 호출 시 청소 중지 → 모터 정지 → 상태 전환 순서로 동작해야 한다.
+// handleObstacle 호출 시 청소 OFF → 모터 STOP → AvoidingState 전환 순서로 부수효과가 누적되어야
+// 한다.
 TEST_F(CleaningStateTest, HandleObstacleOrdersStopBeforeStateTransition) {
     controller.setState(&state);
     motor.moves.clear();
@@ -159,10 +168,10 @@ TEST_F(CleaningStateTest, HandleObstacleOrdersStopBeforeStateTransition) {
 
     state.handleObstacle(controller, true, true, true);
 
-    EXPECT_FALSE(cleaner.powers.empty());
-    EXPECT_EQ(cleaner.powers.back(), rvc::PowerLevel::OFF);
-    EXPECT_FALSE(motor.moves.empty());
-    EXPECT_EQ(motor.moves.back(), rvc::Direction::STOP);
+    ASSERT_FALSE(cleaner.powers.empty());
+    EXPECT_EQ(cleaner.powers.front(), rvc::PowerLevel::OFF);
+    ASSERT_FALSE(motor.moves.empty());
+    EXPECT_EQ(motor.moves.front(), rvc::Direction::STOP);
 }
 
 // handleObstacle 호출 시 현재 state 의 onExit 이 트리거되어 상태 전환이 일어나야 한다.
@@ -173,6 +182,21 @@ TEST_F(CleaningStateTest, HandleObstacleTriggersStateTransition) {
     spy.handleObstacle(controller, true, false, false);
 
     EXPECT_TRUE(spy.onExitCalled);
+}
+
+// handleObstacle 의 전환 대상이 nullptr 가 아닌 AvoidingState 인스턴스여야 한다.
+TEST_F(CleaningStateTest, HandleObstacleTransitionsToAvoidingState) {
+    // AvoidingState.onEnter 가 setState(nullptr) 로 마무리하기 전에 멈추도록,
+    // needsReverse=true + ObstacleSensor 미주입을 조합해 onEnter 가 sensor null 분기에서
+    // early return 하게 만든다. 결과적으로 currentState_ 는 방금 set 된 AvoidingState 로 유지된다.
+    strategy.needsReverseValue = true;
+    controller.setState(&state);
+
+    state.handleObstacle(controller, true, false, false);
+
+    auto* current = controller.getCurrentState();
+    ASSERT_NE(current, nullptr);
+    EXPECT_NE(dynamic_cast<rvc::AvoidingState*>(current), nullptr);
 }
 
 // 매니저가 nullptr 일 때 handleObstacle 호출이 크래시 없이 동작해야 한다.
@@ -273,8 +297,8 @@ TEST_F(CleaningStateTest, HandlePowerOffHandlesNullManagers) {
     EXPECT_NO_THROW(state.handlePowerOff(emptyController));
 }
 
-// CleaningState onEnter → handleDust → handleObstacle 흐름이 일관되게 동작해야 한다.
-TEST_F(CleaningStateTest, EndToEndScenarioBeforeAvoidance) {
+// CleaningState onEnter → handleDust → handleObstacle → AvoidingState 인계 흐름이 일관되게 동작.
+TEST_F(CleaningStateTest, EndToEndScenarioHandsOffToAvoiding) {
     state.onEnter(controller);
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::NORMAL);
 
@@ -283,5 +307,9 @@ TEST_F(CleaningStateTest, EndToEndScenarioBeforeAvoidance) {
 
     state.handleObstacle(controller, true, false, false);
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::OFF);
-    EXPECT_EQ(motor.moves.back(), rvc::Direction::STOP);
+    // STOP (CleaningState 가 보낸 정지) 가 모터 명령에 누적되어 있어야 한다.
+    EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::STOP));
+    // 이어서 AvoidingState.onEnter 가 executeAvoidance 로 LEFT 회피 명령을 push 했다면,
+    // 실제로 AvoidingState 까지 인계가 일어났다는 증거.
+    EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::LEFT));
 }
