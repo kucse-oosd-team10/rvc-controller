@@ -4,6 +4,7 @@
 #include "rvc/i_cleaner.hpp"
 #include "rvc/i_motor.hpp"
 #include "rvc/movement_manager.hpp"
+#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
@@ -137,10 +138,12 @@ TEST_F(ErrorStateTest, HandleDustIsNoop) {
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::OFF);
 }
 
-// handlePowerOff는 상태 전환 없이 no-op이어야 한다
-TEST_F(ErrorStateTest, HandlePowerOffIsNoop) {
+// handlePowerOff 호출 시 OffState로 전이되어야 한다
+TEST_F(ErrorStateTest, HandlePowerOffTransitionsToOffState) {
     state.handlePowerOff(controller);
-    EXPECT_EQ(controller.getCurrentState(), nullptr);
+
+    ASSERT_NE(controller.getCurrentState(), nullptr);
+    EXPECT_NE(dynamic_cast<rvc::OffState*>(controller.getCurrentState()), nullptr);
 }
 
 // onExit는 no-op이어야 한다

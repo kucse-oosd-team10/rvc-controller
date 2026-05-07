@@ -2,6 +2,7 @@
 
 #include "rvc/cleaning_manager.hpp"
 #include "rvc/movement_manager.hpp"
+#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 
 #include <iostream>
@@ -32,7 +33,9 @@ void ErrorState::handleObstacle(RVCController& /*ctx*/, bool /*front*/, bool /*l
 void ErrorState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {
 }
 
-void ErrorState::handlePowerOff(RVCController& /*ctx*/) {
+void ErrorState::handlePowerOff(RVCController& ctx) {
+    static OffState offState;
+    ctx.setState(&offState);
 }
 
 } // namespace rvc

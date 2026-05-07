@@ -6,6 +6,7 @@
 #include "rvc/i_dust_sensor.hpp"
 #include "rvc/i_motor.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
+#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 
 namespace rvc {
@@ -39,7 +40,9 @@ void InitializingState::handleObstacle(RVCController& /*ctx*/, bool /*front*/, b
 void InitializingState::handleDust(RVCController& /*ctx*/, bool /*detected*/) {
 }
 
-void InitializingState::handlePowerOff(RVCController& /*ctx*/) {
+void InitializingState::handlePowerOff(RVCController& ctx) {
+    static OffState offState;
+    ctx.setState(&offState);
 }
 
 } // namespace rvc

@@ -5,6 +5,7 @@
 #include "rvc/i_motor.hpp"
 #include "rvc/i_obstacle_sensor.hpp"
 #include "rvc/initializing_state.hpp"
+#include "rvc/off_state.hpp"
 #include "rvc/rvc_controller.hpp"
 #include "rvc/types.hpp"
 
@@ -192,11 +193,13 @@ TEST_F(InitializingStateTest, HandleDustIsNoop) {
     EXPECT_EQ(controller.getCurrentState(), nullptr);
 }
 
-// handlePowerOff는 no-op이어야 한다
-TEST_F(InitializingStateTest, HandlePowerOffIsNoop) {
+// handlePowerOff 호출 시 OffState로 전이되어야 한다
+TEST_F(InitializingStateTest, HandlePowerOffTransitionsToOffState) {
     auto state = makeState();
-    EXPECT_NO_THROW(state->handlePowerOff(controller));
-    EXPECT_EQ(controller.getCurrentState(), nullptr);
+    state->handlePowerOff(controller);
+
+    ASSERT_NE(controller.getCurrentState(), nullptr);
+    EXPECT_NE(dynamic_cast<rvc::OffState*>(controller.getCurrentState()), nullptr);
 }
 
 // onExit는 no-op이어야 한다
