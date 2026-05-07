@@ -1,6 +1,6 @@
 #pragma once
 
-#include "i_rvc_state.hpp"
+#include "rvc/i_rvc_state.hpp"
 
 namespace rvc {
 class CleaningState : public IRVCState {
