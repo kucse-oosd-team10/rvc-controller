@@ -147,7 +147,9 @@ PYBIND11_MODULE(rvc, m) {
              py::keep_alive<1, 2>());
 
     py::class_<ObstacleSensorSubject>(m, "ObstacleSensorSubject")
-        .def(py::init<IObstacleSensor&>(), py::arg("sensor"), py::keep_alive<1, 2>());
+        .def(py::init<IObstacleSensor&>(), py::arg("sensor"), py::keep_alive<1, 2>())
+        .def("onInterrupt", &ObstacleSensorSubject::onInterrupt)
+        .def("poll", &ObstacleSensorSubject::poll);
 
     py::class_<DustSensorSubject>(m, "DustSensorSubject")
         .def(py::init<IDustSensor&>(), py::arg("sensor"), py::keep_alive<1, 2>());
