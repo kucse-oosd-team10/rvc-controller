@@ -35,6 +35,7 @@ public:
 
     void powerOn();
     void powerOff();
+    void tick();
 
     void onObstacleDetected(bool front, bool left, bool right) override;
     void onDustDetected(bool detected) override;

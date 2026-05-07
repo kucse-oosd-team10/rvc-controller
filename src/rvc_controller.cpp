@@ -1,7 +1,12 @@
 #include "rvc/rvc_controller.hpp"
 
 #include "rvc/avoiding_state.hpp"
+#include "rvc/cleaning_manager.hpp"
+#include "rvc/dust_sensor_subject.hpp"
 #include "rvc/i_rvc_state.hpp"
+#include "rvc/obstacle_sensor_subject.hpp"
+
+#include <iostream>
 
 namespace rvc {
 
@@ -18,13 +23,31 @@ RVCController::RVCController(IObstacleSensor& obstacleSensor, IDustSensor& dustS
 RVCController::~RVCController() = default;
 
 void RVCController::powerOn() {
-    // Phase 3 후속 커밋에서 본문 채움.
+    enterInitializing();
+    if (dynamic_cast<InitializingState*>(currentState_) != nullptr) {
+        return;
+    }
+    if (dynamic_cast<ErrorState*>(currentState_) != nullptr) {
+        return;
+    }
+    obstacleSub_->attach(this);
+    dustSub_->attach(this);
+    std::cout << "Ready" << '\n';
 }
 
 void RVCController::powerOff() {
     if (currentState_ != nullptr) {
         currentState_->handlePowerOff(*this);
     }
+    obstacleSub_->detach(this);
+    dustSub_->detach(this);
+    std::cout << "Off" << '\n';
+}
+
+void RVCController::tick() {
+    obstacleSub_->poll();
+    dustSub_->poll();
+    cleaningMgr_->update();
 }
 
 void RVCController::onObstacleDetected(bool front, bool left, bool right) {

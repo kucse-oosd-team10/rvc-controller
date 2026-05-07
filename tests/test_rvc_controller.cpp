@@ -1,4 +1,5 @@
 #include "rvc/cleaning_manager.hpp"
+#include "rvc/cleaning_state.hpp"
 #include "rvc/dust_sensor_subject.hpp"
 #include "rvc/i_avoid_strategy.hpp"
 #include "rvc/i_cleaner.hpp"
@@ -13,6 +14,8 @@
 #include "rvc/types.hpp"
 
 #include <cstdint>
+#include <functional>
+#include <sstream>
 
 #include <gtest/gtest.h>
 
@@ -134,6 +137,13 @@ protected:
 
     rvc::RVCController controller{obstacleSensor, dustSensor, motor, cleaner,
                                   movementMgr,    cleaningMgr, obstacleSub, dustSub};
+
+    static void suppressCout(const std::function<void()>& func) {
+        std::ostringstream sink;
+        std::streambuf* old = std::cout.rdbuf(sink.rdbuf());
+        func();
+        std::cout.rdbuf(old);
+    }
 };
 
 // setState 호출 시 이전 상태의 onExit와 새 상태의 onEnter가 호출되는지 확인
@@ -199,4 +209,40 @@ TEST_F(RVCControllerTest, InitialStateIsOff) {
     auto* current = controller.getCurrentState();
     ASSERT_NE(current, nullptr);
     EXPECT_NE(dynamic_cast<rvc::OffState*>(current), nullptr);
+}
+
+// powerOn 호출 시 4개 디바이스가 모두 초기화에 성공하면 CleaningState 로 전이된다
+TEST_F(RVCControllerTest, PowerOnTransitionsToCleaningStateOnSuccess) {
+    suppressCout([&] { controller.powerOn(); });
+
+    auto* current = controller.getCurrentState();
+    ASSERT_NE(current, nullptr);
+    EXPECT_NE(dynamic_cast<rvc::CleaningState*>(current), nullptr);
+}
+
+// powerOn 성공 후 obstacle/dust Subject 에 controller 가 attach 되어 이벤트 흐름이 연결된다
+TEST_F(RVCControllerTest, PowerOnAttachesObserverOnSuccess) {
+    suppressCout([&] { controller.powerOn(); });
+
+    EXPECT_NO_THROW(obstacleSub.notify());
+    EXPECT_NO_THROW(dustSub.notify());
+    EXPECT_NO_THROW(suppressCout([&] { controller.powerOff(); }));
+}
+
+// powerOff 호출 시 현재 state 의 handlePowerOff 가 위임되어 OffState 로 전이된다
+TEST_F(RVCControllerTest, PowerOffTransitionsToOffState) {
+    suppressCout([&] {
+        controller.powerOn();
+        controller.powerOff();
+    });
+
+    auto* current = controller.getCurrentState();
+    ASSERT_NE(current, nullptr);
+    EXPECT_NE(dynamic_cast<rvc::OffState*>(current), nullptr);
+}
+
+// tick 은 각 Subject 의 poll 과 CleaningManager::update 를 호출한다 (no-throw 검증)
+TEST_F(RVCControllerTest, TickPollsSubjectsAndUpdatesManager) {
+    suppressCout([&] { controller.powerOn(); });
+    EXPECT_NO_THROW(controller.tick());
 }
