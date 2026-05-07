@@ -44,15 +44,31 @@ public:
 
 class FakeAvoidStrategy : public rvc::IAvoidStrategy {
 public:
-    rvc::Direction decideDirection(bool /*front*/, bool /*left*/, bool /*right*/) override {
+    rvc::Direction decideDirection(bool front, bool left, bool right) override {
+        decideCalled = true;
+        lastFront = front;
+        lastLeft = left;
+        lastRight = right;
         return rvc::Direction::LEFT;
     }
 
-    bool needsReverse(bool /*front*/, bool /*left*/, bool /*right*/) override {
+    bool needsReverse(bool front, bool left, bool right) override {
+        needsReverseCalled = true;
+        reverseFront = front;
+        reverseLeft = left;
+        reverseRight = right;
         return needsReverseValue;
     }
 
     bool needsReverseValue{false};
+    bool needsReverseCalled{false};
+    bool decideCalled{false};
+    bool reverseFront{false};
+    bool reverseLeft{false};
+    bool reverseRight{false};
+    bool lastFront{false};
+    bool lastLeft{false};
+    bool lastRight{false};
 };
 
 bool containsDirection(const std::vector<rvc::Direction>& moves, rvc::Direction target) {
@@ -136,7 +152,9 @@ TEST_F(CleaningStateTest, OnExitIsNoOp) {
     EXPECT_TRUE(cleaner.powers.empty());
 }
 
-// handleObstacle 호출 시 청소가 중지되어야 한다.
+// handleObstacle 호출 시 AvoidingState 인계 직전에 cleaner OFF 명령이 push 되어야 한다.
+// AvoidingState → CleaningState 재진입이 동기적으로 일어나 최종 powerLevel 은 다시 NORMAL 이
+// 되므로 OFF 가 발생했는지만 검증한다.
 TEST_F(CleaningStateTest, HandleObstacleStopsCleaning) {
     state.onEnter(controller);
     cleaner.powers.clear();
@@ -144,8 +162,7 @@ TEST_F(CleaningStateTest, HandleObstacleStopsCleaning) {
     state.handleObstacle(controller, true, false, false);
 
     ASSERT_FALSE(cleaner.powers.empty());
-    EXPECT_EQ(cleaner.powers.back(), rvc::PowerLevel::OFF);
-    EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::OFF);
+    EXPECT_EQ(cleaner.powers.front(), rvc::PowerLevel::OFF);
 }
 
 // handleObstacle 호출 시 AvoidingState 진입 전에 모터 STOP 명령이 먼저 들어가야 한다.
@@ -184,19 +201,28 @@ TEST_F(CleaningStateTest, HandleObstacleTriggersStateTransition) {
     EXPECT_TRUE(spy.onExitCalled);
 }
 
-// handleObstacle 의 전환 대상이 nullptr 가 아닌 AvoidingState 인스턴스여야 한다.
-TEST_F(CleaningStateTest, HandleObstacleTransitionsToAvoidingState) {
-    // AvoidingState.onEnter 가 setState(nullptr) 로 마무리하기 전에 멈추도록,
-    // needsReverse=true + ObstacleSensor 미주입을 조합해 onEnter 가 sensor null 분기에서
-    // early return 하게 만든다. 결과적으로 currentState_ 는 방금 set 된 AvoidingState 로 유지된다.
-    strategy.needsReverseValue = true;
+// handleObstacle 의 front/left/right 값이 AvoidingState 회피 판단까지 전달되어야 한다.
+TEST_F(CleaningStateTest, HandleObstaclePassesObstacleValuesToAvoidanceFlow) {
     controller.setState(&state);
+    motor.moves.clear();
+    cleaner.powers.clear();
 
-    state.handleObstacle(controller, true, false, false);
+    state.handleObstacle(controller, true, false, true);
+
+    EXPECT_TRUE(strategy.needsReverseCalled);
+    EXPECT_TRUE(strategy.decideCalled);
+    EXPECT_TRUE(strategy.reverseFront);
+    EXPECT_FALSE(strategy.reverseLeft);
+    EXPECT_TRUE(strategy.reverseRight);
+    EXPECT_TRUE(strategy.lastFront);
+    EXPECT_FALSE(strategy.lastLeft);
+    EXPECT_TRUE(strategy.lastRight);
+    EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::STOP));
+    EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::LEFT));
 
     auto* current = controller.getCurrentState();
     ASSERT_NE(current, nullptr);
-    EXPECT_NE(dynamic_cast<rvc::AvoidingState*>(current), nullptr);
+    EXPECT_NE(dynamic_cast<rvc::CleaningState*>(current), nullptr);
 }
 
 // 매니저가 nullptr 일 때 handleObstacle 호출이 크래시 없이 동작해야 한다.
@@ -306,10 +332,12 @@ TEST_F(CleaningStateTest, EndToEndScenarioHandsOffToAvoiding) {
     EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::POWER_UP);
 
     state.handleObstacle(controller, true, false, false);
-    EXPECT_EQ(cleaningMgr.getPowerLevel(), rvc::PowerLevel::OFF);
-    // STOP (CleaningState 가 보낸 정지) 가 모터 명령에 누적되어 있어야 한다.
+    // 회피 인계 직전에 OFF 가 cleaner 에 한 번이라도 push 되었는지 검증.
+    // (AvoidingState→CleaningState 재진입으로 최종 powerLevel 은 NORMAL 로 돌아옴)
+    EXPECT_TRUE(std::find(cleaner.powers.begin(), cleaner.powers.end(), rvc::PowerLevel::OFF) !=
+                cleaner.powers.end());
     EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::STOP));
-    // 이어서 AvoidingState.onEnter 가 executeAvoidance 로 LEFT 회피 명령을 push 했다면,
+    // AvoidingState.onEnter 가 executeAvoidance 로 LEFT 회피 명령을 push 했다면,
     // 실제로 AvoidingState 까지 인계가 일어났다는 증거.
     EXPECT_TRUE(containsDirection(motor.moves, rvc::Direction::LEFT));
 }
