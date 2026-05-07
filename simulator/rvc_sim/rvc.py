@@ -1,47 +1,42 @@
-"""rvc module shim — exposes the C++ controller API.
-
-Uses the real pybind11-built ``rvc`` module if available; otherwise falls back
-to the in-repo Mock controller under ``rvc_sim._mock``.
-
-When real bindings are built and importable, the entire ``rvc_sim/_mock/``
-directory can be deleted and the fallback branch in this shim removed.
-"""
+"""rvc module shim — exposes the C++ controller API via pybind11."""
 try:
     from rvc import (  # type: ignore
+        CleaningManager,
+        DefaultAvoidStrategy,
         Direction,
-        PowerLevel,
-        IMotor,
+        DustSensorSubject,
+        IAvoidStrategy,
         ICleaner,
-        IObstacleSensor,
         IDustSensor,
-        RVCController,
-    )
-    _BACKEND = "binding"
-except ImportError:
-    from ._mock.rvc_compat import (
-        Direction,
-        PowerLevel,
         IMotor,
-        ICleaner,
         IObstacleSensor,
-        IDustSensor,
+        MovementManager,
+        ObstacleSensorSubject,
+        PowerLevel,
         RVCController,
+        current_state_name,
     )
-    _BACKEND = "mock"
-
-
-def backend() -> str:
-    """Return the active backend name: ``"binding"`` or ``"mock"``."""
-    return _BACKEND
+except ImportError as exc:  # pragma: no cover - import-time guard
+    raise ImportError(
+        "rvc binding not available. Build with -DBUILD_PYTHON_BINDINGS=ON "
+        "and ensure the resulting rvc.<...>.so directory is on PYTHONPATH "
+        "(e.g. PYTHONPATH=build/dev/bindings)."
+    ) from exc
 
 
 __all__ = [
+    "CleaningManager",
+    "DefaultAvoidStrategy",
     "Direction",
-    "PowerLevel",
-    "IMotor",
+    "DustSensorSubject",
+    "IAvoidStrategy",
     "ICleaner",
-    "IObstacleSensor",
     "IDustSensor",
+    "IMotor",
+    "IObstacleSensor",
+    "MovementManager",
+    "ObstacleSensorSubject",
+    "PowerLevel",
     "RVCController",
-    "backend",
+    "current_state_name",
 ]

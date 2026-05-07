@@ -5,7 +5,6 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import rvc
 from .assertions import evaluate_all
 from .runner import SimulationRunner
 from .scenario import load_scenario
@@ -27,7 +26,6 @@ def _cmd_run(args: argparse.Namespace) -> int:
     failures = evaluate_all(result)
 
     print(f"scenario: {result.scenario.name}")
-    print(f"backend: {rvc.backend()}")
     print(f"ticks executed: {result.snapshots[-1].tick}")
     print(f"final state (after powerOff): {result.state_after_power_off}")
     print(f"dust collected: {result.initial_dust - result.final_dust:.3f} "
