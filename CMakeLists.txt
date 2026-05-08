@@ -12,8 +12,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ---------- Options ----------
-option(ENABLE_TESTING  "Build unit tests"       ON)
-option(ENABLE_COVERAGE "Enable coverage flags"  OFF)
+option(ENABLE_TESTING         "Build unit tests"          ON)
+option(ENABLE_COVERAGE        "Enable coverage flags"     OFF)
+option(BUILD_PYTHON_BINDINGS  "Build pybind11 module"     OFF)
 
 # ---------- Coverage flags ----------
 if(ENABLE_COVERAGE)
@@ -27,4 +28,8 @@ add_subdirectory(src)
 if(ENABLE_TESTING)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(BUILD_PYTHON_BINDINGS)
+    add_subdirectory(bindings)
 endif()

@@ -1,11 +1,24 @@
 # Library target (used by tests and main)
 add_library(rvc_lib
-    controller.cpp
+    rvc_controller.cpp
+    timer.cpp
+    off_state.cpp
+    default_avoid_strategy.cpp
+    movement_manager.cpp
+    dust_sensor_subject.cpp
+    obstacle_sensor_subject.cpp
+    cleaning_manager.cpp
+    avoiding_state.cpp
+    cleaning_state.cpp
+    error_state.cpp
+    initializing_state.cpp
 )
 
 target_include_directories(rvc_lib
     PUBLIC ${PROJECT_SOURCE_DIR}/include
 )
+
+set_target_properties(rvc_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Executable
 add_executable(rvc_main main.cpp)
